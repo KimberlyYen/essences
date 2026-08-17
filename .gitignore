@@ -1,0 +1,12 @@
+node_modules
+dist
+.DS_Store
+*.local
+web/node_modules
+web/dist
+mock後端
+/實作題.md
+/AI產生的介面_參考.png
+/檢驗報告_範例.pdf
+/package-lock.json
+
