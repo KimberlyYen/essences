@@ -7,6 +7,7 @@ import {
   isMissingRequired,
   needsReview,
   pickCandidate,
+  requiredReviewRow,
   resetField,
   shouldStartPending,
   toReviewField,
@@ -206,5 +207,30 @@ describe('修改與確認', () => {
     const reset = resetField(filled, 'f1')
     expect(reset[0].value).toBe('')
     expect(reset[0].status).toBe('pending')
+  })
+
+  it('送出前會抽出三個法規必填的值', () => {
+    const fields = [
+      toReviewField(apiField({ id: 'a', label: '品名', value: '經典原味火腿', required: true })),
+      toReviewField(
+        apiField({ id: 'b', label: '有效日期', value: '2027/01/08', required: true }),
+      ),
+      toReviewField(
+        apiField({
+          id: 'c',
+          label: '廠商名稱',
+          group: '廠商資訊',
+          value: '某某食品股份有限公司',
+          required: true,
+        }),
+      ),
+    ]
+    expect(requiredReviewRow('檢驗報告.pdf', 'doc-1', fields)).toEqual({
+      filename: '檢驗報告.pdf',
+      document_id: 'doc-1',
+      product_name: '經典原味火腿',
+      expiry_date: '2027/01/08',
+      vendor_name: '某某食品股份有限公司',
+    })
   })
 })

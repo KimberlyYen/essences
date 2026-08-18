@@ -132,3 +132,28 @@ export function payloadForSubmit(fields: ReviewField[]) {
     page: field.page,
   }))
 }
+
+export type RequiredReviewRow = {
+  filename: string
+  document_id: string | null
+  product_name: string
+  expiry_date: string
+  vendor_name: string
+}
+
+export function requiredReviewRow(
+  filename: string,
+  documentId: string | null,
+  fields: ReviewField[],
+): RequiredReviewRow {
+  const valueOf = (label: (typeof REQUIRED_LABELS)[number]) =>
+    fields.find((field) => field.label === label)?.value.trim() ?? ''
+
+  return {
+    filename,
+    document_id: documentId,
+    product_name: valueOf('品名'),
+    expiry_date: valueOf('有效日期'),
+    vendor_name: valueOf('廠商名稱'),
+  }
+}

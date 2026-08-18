@@ -41,9 +41,9 @@ export const FieldRow = memo(function FieldRow({ field, onChange, onConfirm, onP
           ) : null}
         </label>
         <p className="flex items-center gap-2 text-xs text-muted">
-          {missing ? <span className="text-danger">請補上</span> : null}
+          {missing ? <span className="text-danger">未填寫</span> : null}
           {!missing && field.status === 'pending' ? <span className="text-warn">需確認</span> : null}
-          {field.status === 'edited' ? <span>已改過</span> : null}
+          {field.status === 'edited' ? <span>已修改</span> : null}
           <span>p.{field.page}</span>
         </p>
       </div>
@@ -54,13 +54,13 @@ export const FieldRow = memo(function FieldRow({ field, onChange, onConfirm, onP
         onChange={(event) => onChange(field.id, event.target.value)}
         aria-required={field.required}
         aria-invalid={missing}
-        placeholder={missing ? '文件裡沒抽到，請填' : undefined}
+        placeholder={missing ? '文件中未抽出，請自行填寫' : undefined}
         className="mt-1.5 w-full rounded-sm border border-line bg-card px-3 py-2 text-sm text-ink outline-none focus:border-accent"
       />
 
       {field.candidates && field.candidates.length > 0 ? (
         <fieldset className="mt-2">
-          <legend className="text-xs text-muted">系統抓到不只一個值，選一個，或自己改上面那欄</legend>
+          <legend className="text-xs text-muted">系統抽出多個候選值，請選擇其一，或直接修改欄位內容</legend>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             {field.candidates.map((candidate) => {
               const selected = field.value === candidate && field.status !== 'pending'
@@ -94,7 +94,7 @@ export const FieldRow = memo(function FieldRow({ field, onChange, onConfirm, onP
               onClick={() => onConfirm(field.id)}
               className="text-xs font-medium text-accent hover:underline"
             >
-              確認無誤
+              確認
             </button>
           ) : null}
           {changed ? (
@@ -103,7 +103,7 @@ export const FieldRow = memo(function FieldRow({ field, onChange, onConfirm, onP
               onClick={() => onReset(field.id)}
               className="text-xs text-muted hover:text-ink hover:underline"
             >
-              回到抽出值
+              還原
             </button>
           ) : null}
         </div>

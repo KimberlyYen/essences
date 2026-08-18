@@ -19,6 +19,8 @@ export function Workspace({ session }: Props) {
     missing,
     ready,
     extracting,
+    submitting,
+    submitError,
     cancelExtract,
     retryExtract,
     resetToUpload,
@@ -41,7 +43,7 @@ export function Workspace({ session }: Props) {
       <header className="sticky top-0 z-20 border-b border-line bg-paper/95 backdrop-blur">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-3 px-4 py-3">
           <div className="min-w-0 flex-1">
-            <p className="font-serif text-lg text-ink">審核抽出欄位</p>
+            <p className="font-serif text-lg text-ink">欄位審核</p>
             <p className="truncate text-sm text-muted">
               {filename}
               {extracting ? ` · ${extract.stage}` : extract.done ? ' · 解析完成' : null}
@@ -63,27 +65,29 @@ export function Workspace({ session }: Props) {
                 onClick={resetToUpload}
                 className="rounded-sm border border-line px-3 py-2 text-sm text-ink hover:bg-paper-2"
               >
-                換一份文件
+                重新上傳
               </button>
             )}
             <button
               type="button"
-              onClick={submit}
-              disabled={!ready}
+              onClick={() => void submit()}
+              disabled={!ready || submitting}
               title={
                 extracting
-                  ? '解析還在跑，結束後才能送出'
-                  : ready
-                    ? reviewCount > 0
-                      ? `還有 ${reviewCount} 項建議檢查，不會擋送出`
-                      : '送出審核結果'
-                    : missing.length
-                      ? `還有必填沒填：${missing.join('、')}`
-                      : '還沒有可送出的欄位'
+                  ? '解析進行中，完成後始可送出'
+                  : submitting
+                    ? '正在寫入 Supabase'
+                    : ready
+                      ? reviewCount > 0
+                        ? `尚有 ${reviewCount} 項建議檢查，不影響送出`
+                        : '送出審核結果'
+                      : missing.length
+                        ? `尚有必填欄位未填寫：${missing.join('、')}`
+                        : '目前沒有可送出的欄位'
               }
               className="rounded-sm bg-accent px-3 py-2 text-sm font-medium text-white hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-40"
             >
-              送出
+              {submitting ? '儲存中…' : '送出'}
             </button>
           </div>
         </div>
@@ -109,10 +113,16 @@ export function Workspace({ session }: Props) {
           </p>
         </div>
 
+        {submitError ? (
+          <div className="border-t border-danger/20 bg-danger-bg">
+            <p className="mx-auto max-w-5xl px-4 py-2 text-sm text-danger">{submitError}</p>
+          </div>
+        ) : null}
+
         {missing.length > 0 ? (
           <div className="border-t border-danger/20 bg-danger-bg">
             <p className="mx-auto max-w-5xl px-4 py-2 text-sm text-danger">
-              必填還沒填：{missing.join('、')}。這幾項不補，送不出去。
+              以下法規必填欄位尚未填寫，無法送出：{missing.join('、')}。
             </p>
           </div>
         ) : null}
@@ -121,8 +131,8 @@ export function Workspace({ session }: Props) {
           <div className="border-t border-danger/20 bg-danger-bg">
             <p className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-2 px-4 py-2 text-sm text-danger">
               <span>
-                解析中途失敗（{extract.error.code}）：{extract.error.message}
-                {extract.fields.length ? '。已抽出的欄位還在，可以改完再送，或重試。' : ''}
+                解析中斷（{extract.error.code}）：{extract.error.message}
+                {extract.fields.length ? '。已抽出的欄位可繼續編輯後送出，或重新解析。' : ''}
               </span>
               <button type="button" onClick={retryExtract} className="underline">
                 重試
@@ -134,7 +144,7 @@ export function Workspace({ session }: Props) {
         {extract.cancelled && !extract.done ? (
           <div className="border-t border-line bg-paper-2">
             <p className="mx-auto max-w-5xl px-4 py-2 text-sm text-ink-soft">
-              你停了解析。已抽出 {extract.fields.length} 個欄位，可以接著改，或換一份文件。
+              已停止解析。目前有 {extract.fields.length} 個欄位可繼續編輯，或重新上傳。
             </p>
           </div>
         ) : null}
@@ -202,11 +212,11 @@ export function Workspace({ session }: Props) {
 
         <main>
           {extract.fields.length === 0 && extracting ? (
-            <p className="text-sm text-muted">正在辨識文件，欄位出現後會依群組排進來。</p>
+            <p className="text-sm text-muted">正在解析文件，抽出的欄位將依群組顯示。</p>
           ) : null}
 
           {extract.fields.length === 0 && !extracting ? (
-            <p className="text-sm text-muted">還沒有欄位。重新上傳，或按重試。</p>
+            <p className="text-sm text-muted">尚無欄位。請重新上傳或重試解析。</p>
           ) : null}
 
           {GROUPS.map((group) => {
@@ -235,7 +245,7 @@ export function Workspace({ session }: Props) {
           })}
 
           {extract.fields.length > 0 && visibleFields.length === 0 ? (
-            <p className="text-sm text-muted">這個篩選底下沒有欄位。</p>
+            <p className="text-sm text-muted">沒有符合條件的欄位。</p>
           ) : null}
         </main>
       </div>

@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { streamExtract, uploadDocument } from '../lib/api'
+import { saveRequiredReview } from '../lib/reviews'
 import {
   acceptField,
   canSubmit,
@@ -10,6 +11,7 @@ import {
   pickCandidate,
   resetField,
   updateFieldValue,
+  type RequiredReviewRow,
 } from '../lib/fields'
 import { initialExtractState, reduceExtract } from '../lib/sse'
 import type { ExtractParams, ExtractState, FilterId, Group, ReviewField } from '../types'
@@ -33,6 +35,9 @@ export function useReviewSession() {
   const [activeGroup, setActiveGroup] = useState<Group | 'all'>('all')
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const [savedReview, setSavedReview] = useState<RequiredReviewRow | null>(null)
   const abortRef = useRef<AbortController | null>(null)
 
   const runExtract = useCallback(async (id: string, extractParams: ExtractParams) => {
@@ -81,7 +86,7 @@ export function useReviewSession() {
       } catch (error) {
         setBusy(false)
         setPhase('upload')
-        setNotice(error instanceof Error ? error.message : '上傳失敗')
+        setNotice(error instanceof Error ? error.message : '上傳失敗，請稍後再試。')
       }
     },
     [runExtract],
@@ -106,6 +111,9 @@ export function useReviewSession() {
     setActiveGroup('all')
     setNotice(null)
     setBusy(false)
+    setSubmitting(false)
+    setSubmitError(null)
+    setSavedReview(null)
   }, [])
 
   const patchFields = useCallback((updater: (fields: ReviewField[]) => ReviewField[]) => {
@@ -140,11 +148,21 @@ export function useReviewSession() {
     [patchFields],
   )
 
-  const submit = useCallback(() => {
-    if (!canSubmit(extract.fields)) return
+  const submit = useCallback(async () => {
+    if (!canSubmit(extract.fields) || submitting) return
     abortRef.current?.abort()
-    setPhase('submitted')
-  }, [extract.fields])
+    setSubmitting(true)
+    setSubmitError(null)
+    try {
+      const saved = await saveRequiredReview(filename, documentId, extract.fields)
+      setSavedReview(saved)
+      setPhase('submitted')
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : '儲存失敗')
+    } finally {
+      setSubmitting(false)
+    }
+  }, [documentId, extract.fields, filename, submitting])
 
   const grouped = useMemo(() => groupFields(extract.fields), [extract.fields])
 
@@ -172,6 +190,9 @@ export function useReviewSession() {
     activeGroup,
     busy,
     notice,
+    submitting,
+    submitError,
+    savedReview,
     grouped,
     visibleFields,
     reviewCount,

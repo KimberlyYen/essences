@@ -9,4 +9,7 @@ mock後端
 /AI產生的介面_參考.png
 /檢驗報告_範例.pdf
 /package-lock.json
+api/.venv
+api/__pycache__
+*.pyc
 

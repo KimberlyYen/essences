@@ -9,7 +9,7 @@ export async function uploadDocument(file: File): Promise<{
   body.append('file', file)
   const response = await fetch('/api/documents', { method: 'POST', body })
   if (!response.ok) {
-    throw new Error('上傳失敗，請再試一次')
+    throw new Error('上傳失敗，請確認服務已啟動後再試。')
   }
   return response.json() as Promise<{ document_id: string; filename: string }>
 }
@@ -35,7 +35,7 @@ export async function streamExtract(
     throw new Error(response.status === 404 ? '找不到這份文件，請重新上傳' : '無法開始解析')
   }
   if (!response.body) {
-    throw new Error('瀏覽器無法讀取解析串流')
+    throw new Error('無法讀取解析資料流')
   }
 
   const reader = response.body.getReader()
