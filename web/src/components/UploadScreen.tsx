@@ -26,28 +26,28 @@ export function UploadScreen({ busy, notice, onStart, onViewRecords, onViewTests
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-xl flex-col justify-center px-5 py-16">
+    <main id="main" className="mx-auto flex min-h-dvh max-w-xl flex-col justify-center px-5 py-16 pb-[max(4rem,env(safe-area-inset-bottom))]">
       <div className="flex items-baseline justify-between gap-4">
         <p className="font-serif text-sm tracking-wide text-accent">essences</p>
-        <div className="flex items-center gap-4">
+        <nav aria-label="其他頁面" className="flex items-center gap-4">
           <button
             type="button"
             onClick={onViewTests}
-            className="text-sm text-accent hover:underline"
+            className="min-h-11 text-sm text-accent hover:underline"
           >
             測試報告
           </button>
           <button
             type="button"
             onClick={onViewRecords}
-            className="text-sm text-accent hover:underline"
+            className="min-h-11 text-sm text-accent hover:underline"
           >
             已儲存紀錄
           </button>
-        </div>
+        </nav>
       </div>
       {/* 標題說這頁在幹嘛；說明把必填規則講清楚 */}
-      <h1 className="mt-3 font-serif text-4xl leading-tight text-ink">文件欄位審核</h1>
+      <h1 className="mt-3 font-serif text-3xl leading-tight text-ink sm:text-4xl">文件欄位審核</h1>
       <p className="mt-4 text-base leading-7 text-ink-soft">
         上傳文件後，系統會解析並依群組帶出欄位。解析期間即可檢視與修改。品名、有效日期、廠商名稱為法規必填，未填寫無法送出。
       </p>
@@ -80,13 +80,14 @@ export function UploadScreen({ busy, notice, onStart, onViewRecords, onViewTests
           }`}
         >
           <span className="text-sm font-medium text-ink">上傳文件</span>
-          <span className="text-sm text-muted">
+          <span id="upload-hint" className="text-sm text-muted">
             {file ? file.name : '點選或將檔案拖曳至此。適用檢驗報告、產品規格表等文件。'}
           </span>
           <input
             ref={inputRef}
             type="file"
             className="sr-only"
+            aria-describedby="upload-hint"
             onChange={(event) => takeFile(event.target.files?.[0] ?? null)}
           />
         </label>
@@ -100,7 +101,7 @@ export function UploadScreen({ busy, notice, onStart, onViewRecords, onViewTests
         <button
           type="submit"
           disabled={!file || busy}
-          className="mt-6 w-full rounded-sm bg-accent px-4 py-3 text-sm font-medium text-white transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-40"
+          className="mt-6 min-h-11 w-full rounded-sm bg-accent px-4 py-3 text-sm font-medium text-white hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-40"
         >
           {busy ? '上傳中…' : '開始解析'}
         </button>
@@ -108,14 +109,14 @@ export function UploadScreen({ busy, notice, onStart, onViewRecords, onViewTests
         {/* 對應後端 query：field_count、speed、fail_at。預設藏起來 */}
         <details className="mt-8 text-sm text-muted">
           <summary className="cursor-pointer select-none hover:text-ink">測試選項</summary>
-          <div className="mt-3 grid grid-cols-3 gap-3">
+          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
             <label className="flex flex-col gap-1">
               欄位數量
               <input
                 type="number"
                 min={1}
                 max={300}
-                className="rounded-sm border border-line bg-card px-2 py-1.5 text-ink"
+                className="min-h-11 rounded-sm border border-line bg-card px-2 py-1.5 text-ink"
                 value={params.field_count}
                 onChange={(event) =>
                   setParams((current) => ({
@@ -131,7 +132,7 @@ export function UploadScreen({ busy, notice, onStart, onViewRecords, onViewTests
                 type="number"
                 min={0.1}
                 step={0.1}
-                className="rounded-sm border border-line bg-card px-2 py-1.5 text-ink"
+                className="min-h-11 rounded-sm border border-line bg-card px-2 py-1.5 text-ink"
                 value={params.speed}
                 onChange={(event) =>
                   setParams((current) => ({
@@ -146,7 +147,7 @@ export function UploadScreen({ busy, notice, onStart, onViewRecords, onViewTests
               <input
                 type="number"
                 min={-1}
-                className="rounded-sm border border-line bg-card px-2 py-1.5 text-ink"
+                className="min-h-11 rounded-sm border border-line bg-card px-2 py-1.5 text-ink"
                 value={params.fail_at}
                 onChange={(event) =>
                   setParams((current) => ({

@@ -17,9 +17,9 @@ export function SubmittedScreen({ filename, fields, saved, onAgain, onViewRecord
   const pending = fields.filter((field) => field.status === 'pending').length
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-lg flex-col justify-center px-5 py-16">
+    <main id="main" className="mx-auto flex min-h-dvh max-w-lg flex-col justify-center px-5 py-16 pb-[max(4rem,env(safe-area-inset-bottom))]">
       <p className="font-serif text-sm text-accent">已送出</p>
-      <h1 className="mt-3 font-serif text-4xl text-ink">審核結果已寫入 Supabase</h1>
+      <h1 className="mt-3 font-serif text-3xl text-ink sm:text-4xl">審核結果已寫入 Supabase</h1>
       <p className="mt-4 text-base leading-7 text-ink-soft">
         本次只儲存法規必填欄位：品名、有效日期、廠商名稱。
       </p>
@@ -58,14 +58,14 @@ export function SubmittedScreen({ filename, fields, saved, onAgain, onViewRecord
         <button
           type="button"
           onClick={onViewRecords}
-          className="rounded-sm bg-accent px-4 py-3 text-sm font-medium text-white hover:bg-accent-hover"
+          className="min-h-11 rounded-sm bg-accent px-4 py-3 text-sm font-medium text-white hover:bg-accent-hover"
         >
           查看已儲存紀錄
         </button>
         <button
           type="button"
           onClick={onAgain}
-          className="rounded-sm border border-line px-4 py-3 text-sm text-ink hover:bg-paper-2"
+          className="min-h-11 rounded-sm border border-line px-4 py-3 text-sm text-ink hover:bg-paper-2"
         >
           上傳新文件
         </button>

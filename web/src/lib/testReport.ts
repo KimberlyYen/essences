@@ -150,6 +150,31 @@ export const TEST_GROUPS: TestGroupReport[] = [
         guards: 'keep-alive 或半截 JSON 要跳過，不要 throw。',
         breaksIf: '有人讓 parseSseBlock 丟例外，後面的欄位全部進不來。',
       },
+      {
+        id: 'unknown-event',
+        name: '不認識的 event 名稱回 null，不要 throw',
+        guards: '後端多一種 keep-alive 名稱時，解析鏈還能繼續。',
+        breaksIf: '有人對未知 event throw，整條 SSE 會斷。',
+      },
+    ],
+  },
+  {
+    id: 'sse-buffer',
+    title: '串流半截 chunk',
+    file: 'web/src/lib/sse.test.ts',
+    cases: [
+      {
+        id: 'split-json',
+        name: 'JSON 被切成兩塊時，第一輪不吐事件，拼完才 parse',
+        guards: 'fetch / proxy 把 data: 中間切開，不能當壞 JSON 丟掉。',
+        breaksIf: '有人每讀到一塊就 parse，半截欄位會消失。',
+      },
+      {
+        id: 'two-events',
+        name: '同一塊裡兩個完整事件會一次吐出',
+        guards: '緩衝把兩個事件拼在一起時，兩個都要進畫面。',
+        breaksIf: '有人只取第一個 \\n\\n 前面，後面的 done 會丟。',
+      },
     ],
   },
   {
@@ -168,6 +193,12 @@ export const TEST_GROUPS: TestGroupReport[] = [
         name: '欄位是一筆一筆累加，不會覆蓋先前結果',
         guards: '新的 field 是 append，不是替換。',
         breaksIf: '有人寫成 fields: [newField]，舊的會消失。',
+      },
+      {
+        id: 'done-flag',
+        name: '收到 done 之後 done 為 true',
+        guards: '解析沒結束不能送；done 沒設起來，送出鍵會一直暗。',
+        breaksIf: '有人處理 done 事件卻忘了設 done: true。',
       },
     ],
   },

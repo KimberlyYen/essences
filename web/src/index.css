@@ -54,3 +54,33 @@ body {
   white-space: nowrap;
   border: 0;
 }
+
+/* Tab 焦點要看得見。滑鼠點擊不要出現同樣的框。 */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* 跳過導覽：沒焦點時在畫面外，Tab 到才落到左上角 */
+.skip-link {
+  position: absolute;
+  left: 0.75rem;
+  top: -4rem;
+  z-index: 50;
+  border-radius: 2px;
+  background: var(--color-ink);
+  padding: 0.5rem 0.75rem;
+  color: var(--color-paper);
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  top: 0.75rem;
+}
+
+/* 開了減少動態的人，進度條不要滑過去 */
+@media (prefers-reduced-motion: reduce) {
+  .progress-fill {
+    transition: none;
+  }
+}

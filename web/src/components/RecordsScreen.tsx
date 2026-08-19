@@ -40,11 +40,11 @@ export function RecordsScreen({ onBack }: Props) {
   }, [load])
 
   return (
-    <main className="mx-auto min-h-dvh max-w-5xl px-5 py-10">
+    <main id="main" className="mx-auto min-h-dvh max-w-5xl px-5 py-10 pb-[max(2.5rem,env(safe-area-inset-bottom))]">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="font-serif text-sm tracking-wide text-accent">essences</p>
-          <h1 className="mt-2 font-serif text-4xl text-ink">已儲存紀錄</h1>
+          <h1 className="mt-2 font-serif text-3xl text-ink sm:text-4xl">已儲存紀錄</h1>
           <p className="mt-3 max-w-xl text-sm leading-6 text-ink-soft">
             寫入 Supabase 的法規必填欄位：品名、有效日期、廠商名稱。新的在最上面。
           </p>
@@ -53,7 +53,7 @@ export function RecordsScreen({ onBack }: Props) {
           <button
             type="button"
             onClick={onBack}
-            className="rounded-sm border border-line px-3 py-2 text-sm text-ink hover:bg-paper-2"
+            className="min-h-11 rounded-sm border border-line px-3 py-2 text-sm text-ink hover:bg-paper-2"
           >
             返回
           </button>
@@ -61,7 +61,7 @@ export function RecordsScreen({ onBack }: Props) {
             type="button"
             onClick={() => void load()}
             disabled={loading}
-            className="rounded-sm bg-accent px-3 py-2 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-40"
+            className="min-h-11 rounded-sm bg-accent px-3 py-2 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-40"
           >
             {loading ? '讀取中…' : '重新整理'}
           </button>
@@ -80,32 +80,58 @@ export function RecordsScreen({ onBack }: Props) {
       ) : null}
 
       {rows.length > 0 ? (
-        <div className="mt-8 overflow-x-auto border-t border-line">
-          <table className="w-full min-w-[40rem] text-left text-sm">
-            <thead>
-              <tr className="border-b border-line text-muted">
-                <th className="py-3 pr-4 font-medium">儲存時間</th>
-                <th className="py-3 pr-4 font-medium">文件</th>
-                <th className="py-3 pr-4 font-medium">品名</th>
-                <th className="py-3 pr-4 font-medium">有效日期</th>
-                <th className="py-3 font-medium">廠商名稱</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.id} className="border-b border-line align-top">
-                  <td className="py-3 pr-4 whitespace-nowrap text-muted">
-                    {formatSavedAt(row.created_at)}
-                  </td>
-                  <td className="py-3 pr-4 text-ink">{row.filename}</td>
-                  <td className="py-3 pr-4 text-ink">{row.product_name}</td>
-                  <td className="py-3 pr-4 text-ink">{row.expiry_date}</td>
-                  <td className="py-3 text-ink">{row.vendor_name}</td>
+        <>
+          {/* 手機：一筆一張卡，不要橫向捲五欄表 */}
+          <ul className="mt-8 space-y-4 md:hidden">
+            {rows.map((row) => (
+              <li key={row.id} className="rounded-sm border border-line bg-card px-4 py-3 text-sm">
+                <p className="text-xs text-muted">{formatSavedAt(row.created_at)}</p>
+                <p className="mt-1 font-medium text-ink">{row.product_name}</p>
+                <dl className="mt-2 grid gap-1 text-ink-soft">
+                  <div className="flex justify-between gap-3">
+                    <dt>有效日期</dt>
+                    <dd className="text-ink">{row.expiry_date}</dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt>廠商名稱</dt>
+                    <dd className="text-right text-ink">{row.vendor_name}</dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt>文件</dt>
+                    <dd className="truncate text-right">{row.filename}</dd>
+                  </div>
+                </dl>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-8 hidden overflow-x-auto border-t border-line md:block">
+            <table className="w-full min-w-[40rem] text-left text-sm">
+              <caption className="sr-only">已儲存的法規必填紀錄</caption>
+              <thead>
+                <tr className="border-b border-line text-muted">
+                  <th className="py-3 pr-4 font-medium">儲存時間</th>
+                  <th className="py-3 pr-4 font-medium">文件</th>
+                  <th className="py-3 pr-4 font-medium">品名</th>
+                  <th className="py-3 pr-4 font-medium">有效日期</th>
+                  <th className="py-3 font-medium">廠商名稱</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {rows.map((row) => (
+                  <tr key={row.id} className="border-b border-line align-top">
+                    <td className="py-3 pr-4 whitespace-nowrap text-muted">
+                      {formatSavedAt(row.created_at)}
+                    </td>
+                    <td className="py-3 pr-4 text-ink">{row.filename}</td>
+                    <td className="py-3 pr-4 text-ink">{row.product_name}</td>
+                    <td className="py-3 pr-4 text-ink">{row.expiry_date}</td>
+                    <td className="py-3 text-ink">{row.vendor_name}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       ) : null}
 
       {loading && rows.length === 0 && !error ? (

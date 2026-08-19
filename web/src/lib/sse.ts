@@ -103,6 +103,22 @@ export function parseSseBlock(block: string): ExtractEvent | null {
 }
 
 /**
+ * fetch 串流可能把一個 SSE 事件切成兩塊。
+ * 湊到 \n\n 才 parse；不完整的尾巴留給下一輪。
+ * README 寫這段最沒把握，所以抽成純函式讓測試餵半截 chunk。
+ */
+export function flushSseBuffer(buffer: string): { events: ExtractEvent[]; rest: string } {
+  const parts = buffer.split('\n\n')
+  const rest = parts.pop() ?? ''
+  const events: ExtractEvent[] = []
+  for (const part of parts) {
+    const event = parseSseBlock(part)
+    if (event) events.push(event)
+  }
+  return { events, rest }
+}
+
+/**
  * 收到事件就累加，不覆蓋舊欄位。
  * error 只記錯誤，fields 留下——題目說解析中途會掛，已抽出的還能改。
  */

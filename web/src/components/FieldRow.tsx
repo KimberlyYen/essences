@@ -44,9 +44,12 @@ export const FieldRow = memo(function FieldRow({ field, onChange, onConfirm, onP
         <label htmlFor={inputId} className="text-sm font-medium text-ink">
           {field.label}
           {field.required ? (
-            <span className="ml-1 text-danger" aria-hidden="true">
-              *
-            </span>
+            <>
+              <span className="ml-1 text-danger" aria-hidden="true">
+                *
+              </span>
+              <span className="sr-only">（必填）</span>
+            </>
           ) : null}
         </label>
         <p className="flex items-center gap-2 text-xs text-muted">
@@ -65,7 +68,7 @@ export const FieldRow = memo(function FieldRow({ field, onChange, onConfirm, onP
         aria-required={field.required}
         aria-invalid={missing}
         placeholder={missing ? '文件中未抽出，請自行填寫' : undefined}
-        className="mt-1.5 w-full rounded-sm border border-line bg-card px-3 py-2 text-sm text-ink outline-none focus:border-accent"
+        className="mt-1.5 w-full min-h-11 rounded-sm border border-line bg-card px-3 py-2 text-sm text-ink"
       />
 
       {/* 約一成欄位才有候選。沒有就不佔空間 */}
@@ -82,7 +85,7 @@ export const FieldRow = memo(function FieldRow({ field, onChange, onConfirm, onP
                   type="button"
                   onClick={() => onPick(field.id, candidate)}
                   aria-pressed={field.value === candidate}
-                  className={`rounded-sm border px-2 py-1 text-xs ${
+                  className={`min-h-11 rounded-sm border px-3 py-2 text-xs ${
                     selected
                       ? 'border-ink bg-ink text-paper'
                       : field.value === candidate
@@ -105,7 +108,7 @@ export const FieldRow = memo(function FieldRow({ field, onChange, onConfirm, onP
             <button
               type="button"
               onClick={() => onConfirm(field.id)}
-              className="text-xs font-medium text-accent hover:underline"
+              className="min-h-11 text-sm font-medium text-accent hover:underline"
             >
               確認
             </button>
@@ -114,7 +117,7 @@ export const FieldRow = memo(function FieldRow({ field, onChange, onConfirm, onP
             <button
               type="button"
               onClick={() => onReset(field.id)}
-              className="text-xs text-muted hover:text-ink hover:underline"
+              className="min-h-11 text-sm text-muted hover:text-ink hover:underline"
             >
               還原
             </button>

@@ -10,11 +10,11 @@ type Props = {
 
 export function TestReportScreen({ onBack }: Props) {
   return (
-    <main className="mx-auto min-h-dvh max-w-3xl px-5 py-10">
+    <main id="main" className="mx-auto min-h-dvh max-w-3xl px-5 py-10 pb-[max(2.5rem,env(safe-area-inset-bottom))]">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="font-serif text-sm tracking-wide text-accent">essences</p>
-          <h1 className="mt-2 font-serif text-4xl text-ink">測試報告</h1>
+          <h1 className="mt-2 font-serif text-3xl text-ink sm:text-4xl">測試報告</h1>
           <p className="mt-3 max-w-xl text-base leading-7 text-ink-soft">
             哪天有人改壞了，這支測試會不會紅。數量不重要。
           </p>
@@ -22,7 +22,7 @@ export function TestReportScreen({ onBack }: Props) {
         <button
           type="button"
           onClick={onBack}
-          className="rounded-sm border border-line px-3 py-2 text-sm text-ink hover:bg-paper-2"
+          className="min-h-11 rounded-sm border border-line px-3 py-2 text-sm text-ink hover:bg-paper-2"
         >
           返回
         </button>

@@ -3,8 +3,9 @@
  * 沒有用 React Router：流程只有「上傳 → 審核 → 已送出」，
  * 再疊「已儲存紀錄」或「測試報告」。用 overlay 切，少一個套件。
  */
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { RecordsScreen } from './components/RecordsScreen'
+import { SkipLink } from './components/SkipLink'
 import { TestReportScreen } from './components/TestReportScreen'
 import { UploadScreen } from './components/UploadScreen'
 import { SubmittedScreen } from './components/SubmittedScreen'
@@ -18,16 +19,14 @@ export default function App() {
   // 疊在流程上面；返回後還會停在原本的 upload / submitted
   const [overlay, setOverlay] = useState<Overlay>('none')
 
+  let screen: ReactNode
+
   if (overlay === 'records') {
-    return <RecordsScreen onBack={() => setOverlay('none')} />
-  }
-
-  if (overlay === 'tests') {
-    return <TestReportScreen onBack={() => setOverlay('none')} />
-  }
-
-  if (session.phase === 'upload') {
-    return (
+    screen = <RecordsScreen onBack={() => setOverlay('none')} />
+  } else if (overlay === 'tests') {
+    screen = <TestReportScreen onBack={() => setOverlay('none')} />
+  } else if (session.phase === 'upload') {
+    screen = (
       <UploadScreen
         busy={session.busy}
         notice={session.notice}
@@ -36,10 +35,8 @@ export default function App() {
         onViewTests={() => setOverlay('tests')}
       />
     )
-  }
-
-  if (session.phase === 'submitted') {
-    return (
+  } else if (session.phase === 'submitted') {
+    screen = (
       <SubmittedScreen
         filename={session.filename}
         fields={session.extract.fields}
@@ -48,8 +45,15 @@ export default function App() {
         onViewRecords={() => setOverlay('records')}
       />
     )
+  } else {
+    // working：解析中或審核中，共用 Workspace
+    screen = <Workspace session={session} />
   }
 
-  // working：解析中或審核中，共用 Workspace
-  return <Workspace session={session} />
+  return (
+    <>
+      <SkipLink />
+      {screen}
+    </>
+  )
 }

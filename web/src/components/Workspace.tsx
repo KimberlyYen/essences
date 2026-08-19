@@ -46,7 +46,7 @@ export function Workspace({ session }: Props) {
     : `${extract.progress}%`
 
   return (
-    <div className="min-h-dvh">
+    <div className="min-h-dvh pb-[max(1.5rem,env(safe-area-inset-bottom))]" aria-busy={extracting}>
       {/* sticky：往下捲時標題、進度、送出鍵還在 */}
       <header className="sticky top-0 z-20 border-b border-line bg-paper/95 backdrop-blur">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-3 px-4 py-3">
@@ -64,7 +64,7 @@ export function Workspace({ session }: Props) {
               <button
                 type="button"
                 onClick={cancelExtract}
-                className="rounded-sm border border-line px-3 py-2 text-sm text-ink hover:bg-paper-2"
+                className="min-h-11 rounded-sm border border-line px-3 py-2 text-sm text-ink hover:bg-paper-2"
               >
                 停止解析
               </button>
@@ -72,7 +72,7 @@ export function Workspace({ session }: Props) {
               <button
                 type="button"
                 onClick={resetToUpload}
-                className="rounded-sm border border-line px-3 py-2 text-sm text-ink hover:bg-paper-2"
+                className="min-h-11 rounded-sm border border-line px-3 py-2 text-sm text-ink hover:bg-paper-2"
               >
                 重新上傳
               </button>
@@ -81,6 +81,7 @@ export function Workspace({ session }: Props) {
               type="button"
               onClick={() => void submit()}
               disabled={!ready || submitting}
+              aria-describedby={missing.length ? 'missing-required' : undefined}
               title={
                 extracting
                   ? '解析進行中，完成後始可送出'
@@ -94,7 +95,7 @@ export function Workspace({ session }: Props) {
                         ? `尚有必填欄位未填寫：${missing.join('、')}`
                         : '目前沒有可送出的欄位'
               }
-              className="rounded-sm bg-accent px-3 py-2 text-sm font-medium text-white hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-40"
+              className="min-h-11 rounded-sm bg-accent px-3 py-2 text-sm font-medium text-white hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-40"
             >
               {submitting ? '儲存中…' : '送出'}
             </button>
@@ -112,7 +113,7 @@ export function Workspace({ session }: Props) {
             aria-label={extract.stage}
           >
             <div
-              className="h-full bg-accent transition-[width] duration-300"
+              className="progress-fill h-full bg-accent transition-[width] duration-300"
               style={{ width: `${Math.min(extract.progress, 100)}%` }}
             />
           </div>
@@ -125,14 +126,14 @@ export function Workspace({ session }: Props) {
 
         {/* 寫入 Supabase 失敗：留在這一頁，不要假裝已送出 */}
         {submitError ? (
-          <div className="border-t border-danger/20 bg-danger-bg">
+          <div className="border-t border-danger/20 bg-danger-bg" role="alert">
             <p className="mx-auto max-w-5xl px-4 py-2 text-sm text-danger">{submitError}</p>
           </div>
         ) : null}
 
         {/* 第一眼該看這裡：哪幾個法規必填還是空的 */}
         {missing.length > 0 ? (
-          <div className="border-t border-danger/20 bg-danger-bg">
+          <div className="border-t border-danger/20 bg-danger-bg" role="alert" id="missing-required">
             <p className="mx-auto max-w-5xl px-4 py-2 text-sm text-danger">
               以下法規必填欄位尚未填寫，無法送出：{missing.join('、')}。
             </p>
@@ -141,13 +142,13 @@ export function Workspace({ session }: Props) {
 
         {/* 後端中途掛掉：已抽出的欄位還在，可以重試同一份 document_id */}
         {extract.error ? (
-          <div className="border-t border-danger/20 bg-danger-bg">
+          <div className="border-t border-danger/20 bg-danger-bg" role="alert">
             <p className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-2 px-4 py-2 text-sm text-danger">
               <span>
                 解析中斷（{extract.error.code}）：{extract.error.message}
                 {extract.fields.length ? '。已抽出的欄位可繼續編輯後送出，或重新解析。' : ''}
               </span>
-              <button type="button" onClick={retryExtract} className="underline">
+              <button type="button" onClick={retryExtract} className="min-h-11 underline">
                 重試
               </button>
             </p>
@@ -168,7 +169,7 @@ export function Workspace({ session }: Props) {
       <div className="mx-auto grid max-w-5xl gap-8 px-4 py-6 md:grid-cols-[13rem_1fr]">
         <aside className="md:sticky md:top-36 md:self-start">
           {/* 「需檢查」才是上百欄時的主路徑，不是搜尋欄位名 */}
-          <nav aria-label="篩選" className="flex gap-2 overflow-x-auto md:flex-col md:gap-1">
+          <nav aria-label="篩選" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:flex-col md:gap-1 md:px-0">
             <FilterButton
               current={filter}
               id="all"
@@ -190,10 +191,11 @@ export function Workspace({ session }: Props) {
           </nav>
 
           {/* 四個群組。數字後面的 ·N 是該組還有幾筆需檢查 */}
-          <nav aria-label="欄位群組" className="mt-5 flex gap-2 overflow-x-auto md:flex-col md:gap-1">
+          <nav aria-label="欄位群組" className="-mx-4 mt-5 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:flex-col md:gap-1 md:px-0">
             <button
               type="button"
               onClick={() => setActiveGroup('all')}
+              aria-current={activeGroup === 'all' ? 'true' : undefined}
               className={navClass(activeGroup === 'all')}
             >
               所有群組
@@ -215,6 +217,7 @@ export function Workspace({ session }: Props) {
                   key={group}
                   type="button"
                   onClick={() => setActiveGroup(group)}
+                  aria-current={activeGroup === group ? 'true' : undefined}
                   className={navClass(activeGroup === group)}
                 >
                   <span>{group}</span>
@@ -228,7 +231,7 @@ export function Workspace({ session }: Props) {
           </nav>
         </aside>
 
-        <main>
+        <main id="main">
           {/* 還沒抽出第一筆時給一句話，不要空白畫面 */}
           {extract.fields.length === 0 && extracting ? (
             <p className="text-sm text-muted">正在解析文件，抽出的欄位將依群組顯示。</p>
@@ -244,7 +247,7 @@ export function Workspace({ session }: Props) {
             return (
               // 組名 sticky，上百欄往下捲時還知道自己在哪一組
               <section key={group} id={`group-${group}`} className="mb-10">
-                <h2 className="sticky top-[8.5rem] z-10 -mx-1 mb-2 bg-paper/95 px-1 py-2 font-serif text-xl text-ink backdrop-blur">
+                <h2 className="mb-2 bg-paper/95 px-1 py-2 font-serif text-xl text-ink md:sticky md:top-[8.5rem] md:z-10 md:-mx-1 md:backdrop-blur">
                   {group}
                   <span className="ml-2 font-sans text-sm text-muted">{fields.length}</span>
                 </h2>
@@ -286,7 +289,12 @@ function FilterButton({
   onClick: (id: FilterId) => void
 }) {
   return (
-    <button type="button" onClick={() => onClick(id)} className={navClass(current === id)}>
+    <button
+      type="button"
+      onClick={() => onClick(id)}
+      aria-pressed={current === id}
+      className={navClass(current === id)}
+    >
       {label}
     </button>
   )
@@ -294,7 +302,7 @@ function FilterButton({
 
 /** 選中：深底淺字；沒選中：淺底。左右對齊給數字用。 */
 function navClass(active: boolean) {
-  return `flex w-full items-center justify-between whitespace-nowrap rounded-sm px-2 py-1.5 text-left text-sm ${
+  return `flex min-h-11 w-full shrink-0 items-center justify-between whitespace-nowrap rounded-sm px-3 py-2 text-left text-sm md:px-2 md:py-1.5 ${
     active ? 'bg-ink text-paper' : 'text-ink-soft hover:bg-paper-2'
   }`
 }

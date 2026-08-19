@@ -3,7 +3,7 @@
  * 開發時 Vite 把 /api 轉到 localhost:8000；Docker 則由 nginx 轉到 api 服務。
  */
 import type { ExtractEvent, ExtractParams } from '../types'
-import { parseSseBlock } from './sse'
+import { flushSseBuffer, parseSseBlock } from './sse'
 
 /** POST multipart，欄位名稱必須是 file，後端才收得到。 */
 export async function uploadDocument(file: File): Promise<{
@@ -58,13 +58,9 @@ export async function streamExtract(
     if (done) break
     // stream: true 保留不完整的 UTF-8 字，下一輪再拼
     buffer += decoder.decode(value, { stream: true })
-    const chunks = buffer.split('\n\n')
-    // pop 出來的是不完整的尾巴，留到下一輪再拼
-    buffer = chunks.pop() ?? ''
-    for (const chunk of chunks) {
-      const event = parseSseBlock(chunk)
-      if (event) onEvent(event)
-    }
+    const flushed = flushSseBuffer(buffer)
+    buffer = flushed.rest
+    for (const event of flushed.events) onEvent(event)
   }
 
   if (buffer.trim()) {

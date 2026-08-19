@@ -109,9 +109,10 @@ Dashboard 還要設這三件事，否則看起來會像失敗：
 | 中途失敗 | `fail_at=3` | 紅條出現，已抽出的 3 筆還在，可重試 |
 | 不想等了 | 解析中按「停止解析」 | 串流停（後端也會因斷線停），已抽出的留下。必填還沒到齊就不能送 |
 | 多候選 | 找有紫色／晶片的列（約一成，至少兩筆） | 點候選會寫入並視為已處理；也可自己打 |
-| 單元測試 | `cd web && npm test` | 送出條件、分組、SSE 事件名、error 時保留欄位 |
+| 單元測試 | `cd web && npm test` | 送出條件、分組、SSE 事件名、error 時保留欄位、半截 chunk 拼回來 |
+| 手機寬度 | 瀏覽器縮到 ~375px | 篩選改橫滑、紀錄改卡片、測試選項直排；雙 sticky 關掉 |
 
-沒把握的：nginx 反代 SSE 在某些環境會 buffer，我關了 `proxy_buffering`，但沒在多種瀏覽器外的 proxy 後面試過。Safari / Firefox 我這次沒開來點。`fail_at` 跟取消沒做成 E2E，只手動試過。
+沒把握的：nginx 反代 SSE 在某些環境會 buffer，我關了 `proxy_buffering`，但沒在多種瀏覽器外的 proxy 後面試過。Safari / Firefox 我這次沒開來點。`fail_at` 跟取消沒做成 E2E，只手動試過。螢幕閱讀器只對過鍵盤 Tab 與 `aria-*`，沒有用 VoiceOver 走完整流程。
 
 ## 優先做什麼、為什麼
 
@@ -119,6 +120,16 @@ Dashboard 還要設這三件事，否則看起來會像失敗：
 2. **解析過程不是空白畫面**（SSE 進群組 + 可取消 + 失敗保留）——十幾秒乾等會讓人以為掛了；失敗跟取消是題目點名的。
 3. **需檢查 vs 安靜的高把握列**——資訊層級。參考圖翻車的地方。
 4. 沒做的放 README，不拿半套功能假裝做完。
+
+## 餘力：無障礙、測試、跨裝置
+
+題目寫有餘力再做。我沒做成覆蓋率牆或 E2E 套件，做的是會擋回歸、或第一眼會卡住的那幾件。
+
+**無障礙。** `lang="zh-Hant"`、欄位 `label`、必填除了 `*` 還有螢幕閱讀器讀得到的「必填」。錯誤跟缺漏用 `role="alert"`，進度用 `progressbar` + `aria-live`。Tab 焦點看得到（先前 input 寫了 `outline-none`，這是錯的，拿掉了）。進頁第一個 Tab 是「跳到主要內容」。顏色不是唯一訊號：缺漏寫「未填寫」，低把握寫「需確認」。沒做：完整 VoiceOver 走查、對比度逐色檢驗。
+
+**多一點測試。** 題目說數量不重要。多測的是 README 裡最沒把握的那段：SSE 被切成半截 JSON 時，buffer 要留到下一輪再 parse。另外鎖未知 event 名稱不 throw、`done` 要真的把 `done` 設起來。沒加 coverage 百分比。
+
+**跨裝置。** 不是另做一套 mobile UI。手機上篩選改橫滑、群組標題不雙 sticky（header 已經黏著了）、紀錄改卡片避免五欄表橫捲、按鈕至少約 44px、底下留 safe-area。沒在真機 Safari 點過。
 
 ## AI 怎麼用
 
@@ -129,4 +140,4 @@ Dashboard 還要設這三件事，否則看起來會像失敗：
 - 失敗／取消保留已抽出欄位，而不是 reset 回上傳頁
 - 測試寫的是契約（SSE event 名、必填、分組順序），不是 snapshot 畫面
 
-**這份 code 裡我最不確定的：** `web/src/lib/api.ts` 用 `fetch` + `ReadableStream` 接 SSE，而不是 `EventSource`。選 fetch 是因為取消要用 `AbortController`，跟後端「客戶端斷線就停」對得上。不確定的是：經過 nginx / Vite proxy 時，chunk 會不會被拼在一起或切在 `data:` 中間。`parseSseBlock` 以 `\n\n` 分段，中間切開理論上 buffer 會補；我單機 Docker 試過沒出事，但這段我沒有用假的殘缺 chunk 做測試，所以是最沒把握的。
+**這份 code 裡我最不確定的：** `web/src/lib/api.ts` 用 `fetch` + `ReadableStream` 接 SSE，而不是 `EventSource`。選 fetch 是因為取消要用 `AbortController`，跟後端「客戶端斷線就停」對得上。半截 chunk 的拼法已經抽成 `flushSseBuffer` 並用假的切開 JSON 測過；不確定的改成「經過 nginx / Vite proxy 時，真實 TCP chunk 會不會跟測試假設的切法不一樣」。單機 Docker 試過沒出事，但沒有對真實 proxy 錄過殘缺 frame。
