@@ -1,3 +1,8 @@
+/**
+ * 審核主畫面。
+ * sticky header 永遠看得到「能不能送、缺哪個必填、解析到哪」。
+ * 左邊篩選，右邊依群組列出欄位——不用表格分頁，才不會把同組拆開。
+ */
 import { GROUPS, type FilterId } from '../types'
 import { FieldRow } from './FieldRow'
 import type { ReviewSession } from '../hooks/useReviewSession'
@@ -33,13 +38,16 @@ export function Workspace({ session }: Props) {
     submit,
   } = session
 
+  // 篩選後再分組，主清單才不會出現被濾掉的列
   const visibleGrouped = groupFields(visibleFields)
+  // 還沒知道總數時先顯示百分比
   const progressLabel = extract.total
     ? `${extract.fields.length}/${extract.total}`
     : `${extract.progress}%`
 
   return (
     <div className="min-h-dvh">
+      {/* sticky：往下捲時標題、進度、送出鍵還在 */}
       <header className="sticky top-0 z-20 border-b border-line bg-paper/95 backdrop-blur">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-3 px-4 py-3">
           <div className="min-w-0 flex-1">
@@ -50,6 +58,7 @@ export function Workspace({ session }: Props) {
               {extract.cancelled ? ' · 已停止' : null}
             </p>
           </div>
+          {/* 解析中只能停；停了之後改成重新上傳。送出鍵 disabled 時用 title 解釋原因 */}
           <div className="flex flex-wrap items-center gap-2">
             {extracting ? (
               <button
@@ -92,6 +101,7 @@ export function Workspace({ session }: Props) {
           </div>
         </div>
 
+        {/* 解析進度。aria-live 讓螢幕閱讀器聽到階段變化，不用自己捲動去追 */}
         <div className="mx-auto max-w-5xl px-4 pb-3">
           <div
             className="h-1 overflow-hidden rounded-full bg-paper-2"
@@ -113,12 +123,14 @@ export function Workspace({ session }: Props) {
           </p>
         </div>
 
+        {/* 寫入 Supabase 失敗：留在這一頁，不要假裝已送出 */}
         {submitError ? (
           <div className="border-t border-danger/20 bg-danger-bg">
             <p className="mx-auto max-w-5xl px-4 py-2 text-sm text-danger">{submitError}</p>
           </div>
         ) : null}
 
+        {/* 第一眼該看這裡：哪幾個法規必填還是空的 */}
         {missing.length > 0 ? (
           <div className="border-t border-danger/20 bg-danger-bg">
             <p className="mx-auto max-w-5xl px-4 py-2 text-sm text-danger">
@@ -127,6 +139,7 @@ export function Workspace({ session }: Props) {
           </div>
         ) : null}
 
+        {/* 後端中途掛掉：已抽出的欄位還在，可以重試同一份 document_id */}
         {extract.error ? (
           <div className="border-t border-danger/20 bg-danger-bg">
             <p className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-2 px-4 py-2 text-sm text-danger">
@@ -141,6 +154,7 @@ export function Workspace({ session }: Props) {
           </div>
         ) : null}
 
+        {/* 使用者按停止：斷線後端就會停，這裡保留部分結果 */}
         {extract.cancelled && !extract.done ? (
           <div className="border-t border-line bg-paper-2">
             <p className="mx-auto max-w-5xl px-4 py-2 text-sm text-ink-soft">
@@ -150,8 +164,10 @@ export function Workspace({ session }: Props) {
         ) : null}
       </header>
 
+      {/* 左篩選、右清單。小螢幕改成上下排 */}
       <div className="mx-auto grid max-w-5xl gap-8 px-4 py-6 md:grid-cols-[13rem_1fr]">
         <aside className="md:sticky md:top-36 md:self-start">
+          {/* 「需檢查」才是上百欄時的主路徑，不是搜尋欄位名 */}
           <nav aria-label="篩選" className="flex gap-2 overflow-x-auto md:flex-col md:gap-1">
             <FilterButton
               current={filter}
@@ -173,6 +189,7 @@ export function Workspace({ session }: Props) {
             />
           </nav>
 
+          {/* 四個群組。數字後面的 ·N 是該組還有幾筆需檢查 */}
           <nav aria-label="欄位群組" className="mt-5 flex gap-2 overflow-x-auto md:flex-col md:gap-1">
             <button
               type="button"
@@ -184,6 +201,7 @@ export function Workspace({ session }: Props) {
             {GROUPS.map((group) => {
               const count = grouped.get(group)?.length ?? 0
               const reviewInGroup = grouped.get(group)?.filter(needsReview).length ?? 0
+              // 解析中群組還沒到，仍顯示名稱，讓人知道四組都會出現
               if (count === 0 && extracting) {
                 return (
                   <p key={group} className="px-2 py-1 text-sm text-muted">
@@ -211,6 +229,7 @@ export function Workspace({ session }: Props) {
         </aside>
 
         <main>
+          {/* 還沒抽出第一筆時給一句話，不要空白畫面 */}
           {extract.fields.length === 0 && extracting ? (
             <p className="text-sm text-muted">正在解析文件，抽出的欄位將依群組顯示。</p>
           ) : null}
@@ -223,6 +242,7 @@ export function Workspace({ session }: Props) {
             const fields = visibleGrouped.get(group) ?? []
             if (fields.length === 0) return null
             return (
+              // 組名 sticky，上百欄往下捲時還知道自己在哪一組
               <section key={group} id={`group-${group}`} className="mb-10">
                 <h2 className="sticky top-[8.5rem] z-10 -mx-1 mb-2 bg-paper/95 px-1 py-2 font-serif text-xl text-ink backdrop-blur">
                   {group}
@@ -253,6 +273,7 @@ export function Workspace({ session }: Props) {
   )
 }
 
+/** 篩選鈕：選中時反白，跟群組鈕共用 navClass。 */
 function FilterButton({
   current,
   id,
@@ -271,6 +292,7 @@ function FilterButton({
   )
 }
 
+/** 選中：深底淺字；沒選中：淺底。左右對齊給數字用。 */
 function navClass(active: boolean) {
   return `flex w-full items-center justify-between whitespace-nowrap rounded-sm px-2 py-1.5 text-left text-sm ${
     active ? 'bg-ink text-paper' : 'text-ink-soft hover:bg-paper-2'

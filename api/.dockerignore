@@ -1,3 +1,4 @@
+# Python 快取與虛擬環境不要打進映像
 __pycache__
 *.pyc
 .venv

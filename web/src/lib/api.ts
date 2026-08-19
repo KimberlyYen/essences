@@ -1,6 +1,11 @@
+/**
+ * 跟 mock 後端講話的地方。
+ * 開發時 Vite 把 /api 轉到 localhost:8000；Docker 則由 nginx 轉到 api 服務。
+ */
 import type { ExtractEvent, ExtractParams } from '../types'
 import { parseSseBlock } from './sse'
 
+/** POST multipart，欄位名稱必須是 file，後端才收得到。 */
 export async function uploadDocument(file: File): Promise<{
   document_id: string
   filename: string
@@ -14,6 +19,12 @@ export async function uploadDocument(file: File): Promise<{
   return response.json() as Promise<{ document_id: string; filename: string }>
 }
 
+/**
+ * GET SSE。不用 EventSource，是因為取消解析需要 AbortController；
+ * 後端文件寫了：客戶端斷線就會停運算。
+ *
+ * 串流可能把一個事件切成兩塊，所以用 buffer 拼到看到 \n\n 再 parse。
+ */
 export async function streamExtract(
   documentId: string,
   params: ExtractParams,
@@ -45,8 +56,10 @@ export async function streamExtract(
   while (true) {
     const { done, value } = await reader.read()
     if (done) break
+    // stream: true 保留不完整的 UTF-8 字，下一輪再拼
     buffer += decoder.decode(value, { stream: true })
     const chunks = buffer.split('\n\n')
+    // pop 出來的是不完整的尾巴，留到下一輪再拼
     buffer = chunks.pop() ?? ''
     for (const chunk of chunks) {
       const event = parseSseBlock(chunk)

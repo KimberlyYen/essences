@@ -1,14 +1,28 @@
+/**
+ * 欄位規則集中在這裡，不放進 React。
+ * 送出能不能按、要不要標「需檢查」、怎麼分組，面試被問「拿掉會怎樣」就是這檔。
+ */
 import { GROUPS, type ApiField, type Group, type ReviewField } from '../types'
 
-/** 後端把低把握落在 0.31–0.68、高把握落在 0.82–0.99，中間這條線分開兩群。 */
+/**
+ * 後端低把握大約 0.31–0.68，高把握大約 0.82–0.99。
+ * 0.75 切在兩群中間。這是前端自己定的門檻，不是 API 契約。
+ */
 export const LOW_CONFIDENCE_THRESHOLD = 0.75
 
+/** 題目點名的三個法規必填。沒抽到也必須讓使用者補，不能空著送出。 */
 export const REQUIRED_LABELS = ['品名', '有效日期', '廠商名稱'] as const
 
 export function isGroup(value: string): value is Group {
+  // 後端 group 若出乎預期，groupFields 會退回「基本資料」
   return (GROUPS as readonly string[]).includes(value)
 }
 
+/**
+ * 剛抽出來時，要不要進「待確認」。
+ * 缺漏、多候選、沒把握 → pending；高把握且只有一個值 → 直接 accepted。
+ * 上百欄不能每列都逼人按確認，所以高把握預設通過。
+ */
 export function shouldStartPending(field: ApiField): boolean {
   if (field.required && field.value.trim() === '') return true
   if (field.candidates && field.candidates.length > 0) return true
@@ -16,6 +30,7 @@ export function shouldStartPending(field: ApiField): boolean {
   return field.confidence < LOW_CONFIDENCE_THRESHOLD
 }
 
+/** 把 API 欄位加上 originalValue / status，之後才能還原、判斷有沒有改過。 */
 export function toReviewField(field: ApiField): ReviewField {
   return {
     ...field,
@@ -28,10 +43,12 @@ export function isMissingRequired(field: Pick<ReviewField, 'required' | 'value'>
   return field.required && field.value.trim() === ''
 }
 
+/** 「需檢查」= 必填還空，或狀態仍是 pending。 */
 export function needsReview(field: ReviewField): boolean {
   return isMissingRequired(field) || field.status === 'pending'
 }
 
+/** 三個必填標籤還沒出現在結果裡（解析中途取消時常發生）。 */
 export function absentRequiredLabels(fields: ReviewField[]): string[] {
   const labels = new Set(fields.map((field) => field.label))
   return REQUIRED_LABELS.filter((label) => !labels.has(label))
@@ -39,7 +56,7 @@ export function absentRequiredLabels(fields: ReviewField[]): string[] {
 
 /**
  * 送出的硬條件：三個法規必填都在、而且都有值。
- * 低把握、多候選不擋送出——上百欄時把每筆都變成硬門檻，使用者會放棄。
+ * 低把握、多候選不擋送出——否則上百欄會變成處罰。
  */
 export function canSubmit(fields: ReviewField[]): boolean {
   if (fields.length === 0) return false
@@ -47,12 +64,17 @@ export function canSubmit(fields: ReviewField[]): boolean {
   return !fields.some(isMissingRequired)
 }
 
+/** 畫面上紅條要點名哪些必填：空的 + 根本還沒抽出來的。 */
 export function missingRequiredLabels(fields: ReviewField[]): string[] {
   const empty = fields.filter(isMissingRequired).map((field) => field.label)
   const absent = absentRequiredLabels(fields)
   return [...new Set([...empty, ...absent])]
 }
 
+/**
+ * 後端照文件順序回，同組不保證相鄰。
+ * 這裡重排成四個群組，組內維持到達順序。
+ */
 export function groupFields(fields: ReviewField[]): Map<Group, ReviewField[]> {
   const grouped = new Map<Group, ReviewField[]>()
   for (const group of GROUPS) grouped.set(group, [])
@@ -63,6 +85,7 @@ export function groupFields(fields: ReviewField[]): Map<Group, ReviewField[]> {
   return grouped
 }
 
+/** 打字修改。必填被清成空白要回到 pending，不能假裝已確認。 */
 export function updateFieldValue(
   fields: ReviewField[],
   id: string,
@@ -82,6 +105,7 @@ export function updateFieldValue(
   })
 }
 
+/** 「確認」：空的必填不能確認。未改動的欄位會維持同一個物件，FieldRow 的 memo 才有用。 */
 export function acceptField(fields: ReviewField[], id: string): ReviewField[] {
   return fields.map((field) => {
     if (field.id !== id) return field
@@ -90,6 +114,7 @@ export function acceptField(fields: ReviewField[], id: string): ReviewField[] {
   })
 }
 
+/** 點候選值。選回系統首選算 accepted，選別的算 edited。 */
 export function pickCandidate(
   fields: ReviewField[],
   id: string,
@@ -105,6 +130,7 @@ export function pickCandidate(
   })
 }
 
+/** 還原成系統抽出的值，並重新計算要不要 pending。 */
 export function resetField(fields: ReviewField[], id: string): ReviewField[] {
   return fields.map((field) => {
     if (field.id !== id) return field
@@ -121,6 +147,7 @@ export function resetField(fields: ReviewField[], id: string): ReviewField[] {
   })
 }
 
+/** 送出當下的完整欄位快照（畫面上統計用，不是寫進 Supabase 的那包）。 */
 export function payloadForSubmit(fields: ReviewField[]) {
   return fields.map((field) => ({
     id: field.id,
@@ -133,6 +160,7 @@ export function payloadForSubmit(fields: ReviewField[]) {
   }))
 }
 
+/** 真正寫進 Supabase 的列：只留三個法規必填。 */
 export type RequiredReviewRow = {
   filename: string
   document_id: string | null

@@ -1,2 +1,3 @@
+# 建映像時不要把本機 node_modules / dist 拷進去，容器裡會自己裝、自己編譯。
 node_modules
 dist

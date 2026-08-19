@@ -1,3 +1,7 @@
+/**
+ * 從 Supabase 把 reviews 列出來。
+ * 進頁就 load 一次；「重新整理」再打一次，方便剛送出後立刻核對。
+ */
 import { useCallback, useEffect, useState } from 'react'
 import { listRequiredReviews, type SavedReview } from '../lib/reviews'
 
@@ -16,6 +20,7 @@ export function RecordsScreen({ onBack }: Props) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // 進頁、按重新整理都走同一條
   const load = useCallback(async () => {
     setLoading(true)
     setError(null)
@@ -29,6 +34,7 @@ export function RecordsScreen({ onBack }: Props) {
     }
   }, [])
 
+  // 掛上就讀一次；load 穩定所以只跑一次
   useEffect(() => {
     void load()
   }, [load])
@@ -68,6 +74,7 @@ export function RecordsScreen({ onBack }: Props) {
         </p>
       ) : null}
 
+      {/* 表在、政策對、只是還沒送過 */}
       {!error && !loading && rows.length === 0 ? (
         <p className="mt-8 text-sm text-muted">還沒有紀錄。審核完成並送出後會出現在這裡。</p>
       ) : null}

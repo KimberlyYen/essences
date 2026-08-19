@@ -1,3 +1,4 @@
+# Vite 預設忽略清單：log、node_modules、dist、.env.local（*.local）
 # Logs
 logs
 *.log

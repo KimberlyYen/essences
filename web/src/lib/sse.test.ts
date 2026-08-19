@@ -1,9 +1,13 @@
+/**
+ * SSE 事件名認錯、error 把已抽出欄位清掉，這支會紅。
+ */
 import { describe, expect, it } from 'vitest'
 import { initialExtractState, parseSseBlock, reduceExtract } from './sse'
 import { canSubmit } from './fields'
 
 describe('SSE 事件解析', () => {
   it('能解析 stage / field / error / done，event 名稱認錯就會整條鏈壞掉', () => {
+    // 四種 event 名稱都要對得上 mock 後端 README
     expect(
       parseSseBlock('event: stage\ndata: {"stage":"抽取欄位","progress":75,"total":18}'),
     ).toEqual({
@@ -52,6 +56,7 @@ describe('SSE 事件解析', () => {
   })
 
   it('註解行與壞掉的 JSON 不會炸掉後續欄位', () => {
+    // parse 失敗要回 null，呼叫端直接跳過，不要 throw
     expect(parseSseBlock(': keep-alive')).toBeNull()
     expect(parseSseBlock('event: field\ndata: {not-json')).toBeNull()
   })
@@ -59,6 +64,7 @@ describe('SSE 事件解析', () => {
 
 describe('解析過程的狀態累積', () => {
   it('中途收到 error 時，已經抽出的欄位要留下來', () => {
+    // 先累積一筆 field，再 error；fields 長度仍要是 1
     let state = initialExtractState
     state = reduceExtract(state, {
       type: 'field',
@@ -86,6 +92,7 @@ describe('解析過程的狀態累積', () => {
   })
 
   it('欄位是一筆一筆累加，不會覆蓋先前結果', () => {
+    // 兩次 field 之後 ids 應是 f1, f2，不是只剩 f2
     let state = initialExtractState
     state = reduceExtract(state, {
       type: 'field',

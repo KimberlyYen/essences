@@ -1,4 +1,5 @@
 {
+  // 專案拆兩份 tsconfig：app 管 React，node 管 vite.config.ts
   "files": [],
   "references": [
     { "path": "./tsconfig.app.json" },

@@ -1,3 +1,7 @@
+/**
+ * SSE 兩件事：把文字塊解析成事件、把事件累加進 ExtractState。
+ * 純函式，所以 sse.test.ts 不用開瀏覽器就能測。
+ */
 import type { ExtractEvent, ExtractState } from '../types'
 import { toReviewField } from './fields'
 
@@ -11,8 +15,16 @@ export const initialExtractState: ExtractState = {
   cancelled: false,
 }
 
+/**
+ * 後端一個事件長這樣：
+ *   event: field
+ *   data: {"id":"f1", ...}
+ *
+ * 以空行分隔。註解行（: keep-alive）跟壞 JSON 要丟掉，不能讓後面整串掛掉。
+ */
 export function parseSseBlock(block: string): ExtractEvent | null {
   const trimmed = block.trim()
+  // SSE 註解行以冒號開頭，例如 keep-alive，不是資料
   if (!trimmed || trimmed.startsWith(':')) return null
 
   let eventName = 'message'
@@ -42,6 +54,7 @@ export function parseSseBlock(block: string): ExtractEvent | null {
   if (typeof data !== 'object' || data === null) return null
   const record = data as Record<string, unknown>
 
+  // 依 event 名稱對成前端的 union type；名稱認錯後面畫面都會錯
   if (eventName === 'stage') {
     return {
       type: 'stage',
@@ -89,9 +102,14 @@ export function parseSseBlock(block: string): ExtractEvent | null {
   return null
 }
 
+/**
+ * 收到事件就累加，不覆蓋舊欄位。
+ * error 只記錯誤，fields 留下——題目說解析中途會掛，已抽出的還能改。
+ */
 export function reduceExtract(state: ExtractState, event: ExtractEvent): ExtractState {
   switch (event.type) {
     case 'stage':
+      // 只改進度文字，欄位清單不動
       return {
         ...state,
         stage: event.stage,
@@ -100,17 +118,20 @@ export function reduceExtract(state: ExtractState, event: ExtractEvent): Extract
         cancelled: false,
       }
     case 'field':
+      // 接到一筆就 append，不要用新陣列蓋掉舊的
       return {
         ...state,
         fields: [...state.fields, toReviewField(event.field)],
         cancelled: false,
       }
     case 'error':
+      // 不把 fields 清掉
       return {
         ...state,
         error: { message: event.message, code: event.code },
       }
     case 'done':
+      // done=true 之後 hook 才允許送出
       return {
         ...state,
         stage: event.stage,

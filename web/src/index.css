@@ -1,5 +1,6 @@
 @import "tailwindcss";
 
+/* 主題色集中在這裡。畫面用 bg-paper、text-ink、bg-accent，不要散落 hex。 */
 @theme {
   --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
   --font-serif: "Fraunces", ui-serif, Georgia, "Times New Roman", serif;
@@ -22,6 +23,7 @@ html {
   background: var(--color-paper);
 }
 
+/* 整頁紙色、深字、無預設 margin，避免瀏覽器白邊 */
 body {
   margin: 0;
   min-height: 100dvh;
@@ -34,12 +36,14 @@ body {
   min-height: 100dvh;
 }
 
+/* 上百欄時讓瀏覽器跳過畫面外的列，先不算完整虛擬列表。 */
 .field-row {
   content-visibility: auto;
   contain-intrinsic-size: auto 92px;
 }
 
 .sr-only {
+  /* 視覺隱藏、螢幕閱讀器還讀得到。用在真正的 file input。 */
   position: absolute;
   width: 1px;
   height: 1px;

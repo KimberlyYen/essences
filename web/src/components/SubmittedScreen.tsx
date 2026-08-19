@@ -1,3 +1,6 @@
+/**
+ * 送出成功頁。只展示剛寫進 Supabase 的三個必填，順便帶這次改了幾欄。
+ */
 import type { RequiredReviewRow } from '../lib/fields'
 import type { ReviewField } from '../types'
 
@@ -20,6 +23,7 @@ export function SubmittedScreen({ filename, fields, saved, onAgain, onViewRecord
       <p className="mt-4 text-base leading-7 text-ink-soft">
         本次只儲存法規必填欄位：品名、有效日期、廠商名稱。
       </p>
+      {/* saved 是剛 insert 成功的那一列；沒有的話退回檔名 */}
       <dl className="mt-8 grid grid-cols-1 gap-4 text-sm">
         <div>
           <dt className="text-muted">文件</dt>

@@ -1,3 +1,7 @@
+/**
+ * 第一屏：選檔、開始解析。
+ * 測試選項收在 <details> 裡，平常看不到，驗證 fail_at / 上百欄時才打開。
+ */
 import { useRef, useState } from 'react'
 import { defaultParams } from '../hooks/useReviewSession'
 import type { ExtractParams } from '../types'
@@ -32,6 +36,7 @@ export function UploadScreen({ busy, notice, onStart, onViewRecords }: Props) {
           已儲存紀錄
         </button>
       </div>
+      {/* 標題說這頁在幹嘛；說明把必填規則講清楚 */}
       <h1 className="mt-3 font-serif text-4xl leading-tight text-ink">文件欄位審核</h1>
       <p className="mt-4 text-base leading-7 text-ink-soft">
         上傳文件後，系統會解析並依群組帶出欄位。解析期間即可檢視與修改。品名、有效日期、廠商名稱為法規必填，未填寫無法送出。
@@ -44,6 +49,7 @@ export function UploadScreen({ busy, notice, onStart, onViewRecords }: Props) {
           if (file) onStart(file, params)
         }}
       >
+        {/* label 包住隱藏的 file input，點整塊都能選檔；再加 drag & drop */}
         <label
           onDragEnter={(event) => {
             event.preventDefault()
@@ -89,6 +95,7 @@ export function UploadScreen({ busy, notice, onStart, onViewRecords }: Props) {
           {busy ? '上傳中…' : '開始解析'}
         </button>
 
+        {/* 對應後端 query：field_count、speed、fail_at。預設藏起來 */}
         <details className="mt-8 text-sm text-muted">
           <summary className="cursor-pointer select-none hover:text-ink">測試選項</summary>
           <div className="mt-3 grid grid-cols-3 gap-3">

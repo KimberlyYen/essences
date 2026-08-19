@@ -1,9 +1,13 @@
+# Docker 一鍵起 mock API + 前端靜態檔。
+# web 的 5173 對應容器內 nginx 80，跟本機 npm run dev 用同一個網址。
 services:
+  # mock 解析 API，對應題目附的 FastAPI
   api:
     build: ./api
     ports:
       - "8000:8000"
 
+  # 編譯後的前端。depends_on 只保證啟動順序，不保證 API 已 ready
   web:
     build: ./web
     ports:

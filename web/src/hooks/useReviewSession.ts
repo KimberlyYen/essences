@@ -1,3 +1,7 @@
+/**
+ * 整次「上傳 → 解析 → 審核 → 送出」的狀態都在這個 hook。
+ * 畫面元件只負責畫，不自己打 API。
+ */
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { streamExtract, uploadDocument } from '../lib/api'
 import { saveRequiredReview } from '../lib/reviews'
@@ -19,6 +23,7 @@ import { GROUPS } from '../types'
 
 export type Phase = 'upload' | 'working' | 'submitted'
 
+/** 對應 mock 後端預設：18 欄、正常速度、不故意失敗。 */
 export const defaultParams: ExtractParams = {
   field_count: 18,
   speed: 1,
@@ -26,8 +31,10 @@ export const defaultParams: ExtractParams = {
 }
 
 export function useReviewSession() {
+  // phase 決定現在是上傳、審核還是已送出
   const [phase, setPhase] = useState<Phase>('upload')
   const [filename, setFilename] = useState('')
+  // 重試解析時還要用同一個 id
   const [documentId, setDocumentId] = useState<string | null>(null)
   const [params, setParams] = useState<ExtractParams>(defaultParams)
   const [extract, setExtract] = useState<ExtractState>(initialExtractState)
@@ -38,8 +45,10 @@ export function useReviewSession() {
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [savedReview, setSavedReview] = useState<RequiredReviewRow | null>(null)
+  // 用來中止 SSE。ref 才不會因為 re-render 丢掉 AbortController。
   const abortRef = useRef<AbortController | null>(null)
 
+  /** 對同一個 document_id 開 SSE。新的一次會先 abort 舊的，避免兩條串流同時改 state。 */
   const runExtract = useCallback(async (id: string, extractParams: ExtractParams) => {
     abortRef.current?.abort()
     const controller = new AbortController()
@@ -73,6 +82,7 @@ export function useReviewSession() {
     }
   }, [])
 
+  /** 上傳成功才開始解析。上傳失敗要留在 upload 頁，並把錯誤顯示在選檔區下面。 */
   const startWithFile = useCallback(
     async (file: File, extractParams: ExtractParams) => {
       setParams(extractParams)
@@ -116,6 +126,7 @@ export function useReviewSession() {
     setSavedReview(null)
   }, [])
 
+  /** 只改 fields，不動進度、錯誤。所有「改某一欄」都走這裡。 */
   const patchFields = useCallback((updater: (fields: ReviewField[]) => ReviewField[]) => {
     setExtract((current) => ({ ...current, fields: updater(current.fields) }))
   }, [])
@@ -148,6 +159,7 @@ export function useReviewSession() {
     [patchFields],
   )
 
+  /** 寫入 Supabase 成功才進 submitted。失敗留在審核頁，紅條顯示原因。 */
   const submit = useCallback(async () => {
     if (!canSubmit(extract.fields) || submitting) return
     abortRef.current?.abort()
@@ -166,6 +178,7 @@ export function useReviewSession() {
 
   const grouped = useMemo(() => groupFields(extract.fields), [extract.fields])
 
+  // 左側篩選實際過濾的清單
   const visibleFields = useMemo(() => {
     return extract.fields.filter((field) => {
       if (filter === 'review' && !needsReview(field)) return false
@@ -178,9 +191,11 @@ export function useReviewSession() {
   const reviewCount = extract.fields.filter(needsReview).length
   const missing = missingRequiredLabels(extract.fields)
   const extracting = busy && !extract.done && !extract.error && !extract.cancelled
+  // 串流還沒結束時，空的必填可能還沒送到，所以不能送
   const settled = extract.done || extract.cancelled || Boolean(extract.error)
   const ready = settled && canSubmit(extract.fields)
 
+  // 畫面要用的資料跟動作一次回傳，元件不要自己算規則
   return {
     phase,
     filename,

@@ -1,3 +1,4 @@
+# 不要把依賴、編譯結果、本機密鑰、題目原稿送進 GitHub。
 node_modules
 dist
 .DS_Store
@@ -12,4 +13,3 @@ mock後端
 api/.venv
 api/__pycache__
 *.pyc
-

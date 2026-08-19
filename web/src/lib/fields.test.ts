@@ -1,3 +1,7 @@
+/**
+ * 送出規則、分組、確認狀態。
+ * 有人把 canSubmit 改壞（例如必填空白也能送），這些測試要紅。
+ */
 import { describe, expect, it } from 'vitest'
 import type { ApiField, ReviewField } from '../types'
 import {
@@ -14,6 +18,7 @@ import {
   updateFieldValue,
 } from './fields'
 
+/** 測資工廠：只覆寫要測的欄位，其餘用合理預設。 */
 function apiField(overrides: Partial<ApiField> = {}): ApiField {
   return {
     id: 'f1',
@@ -29,6 +34,7 @@ function apiField(overrides: Partial<ApiField> = {}): ApiField {
 
 describe('送出條件：法規必填不能空', () => {
   it('必填欄位是空字串時不能送出', () => {
+    // 有效日期抽到空字串：這是後端保證會發生的情況
     const fields: ReviewField[] = [
       toReviewField(apiField({ id: 'a', label: '品名', value: '火腿', required: true })),
       toReviewField(apiField({ id: 'b', label: '有效日期', value: '', confidence: null, required: true })),
@@ -47,6 +53,7 @@ describe('送出條件：法規必填不能空', () => {
   })
 
   it('三個必填都有值就可以送出，即使還有低把握未確認', () => {
+    // 鈉 confidence 0.4 仍 needsReview，但不該擋住送出
     const fields: ReviewField[] = [
       toReviewField(apiField({ id: 'a', label: '品名', value: '火腿', required: true })),
       toReviewField(
@@ -82,6 +89,7 @@ describe('送出條件：法規必填不能空', () => {
   })
 
   it('三個必填標籤還沒全部出現時不能送出——避免解析中途誤送', () => {
+    // 只有品名，有效日期跟廠商名稱還沒抽出來
     const fields: ReviewField[] = [
       toReviewField(apiField({ id: 'a', label: '品名', value: '火腿', required: true })),
     ]
@@ -116,6 +124,7 @@ describe('抽出欄位的初始狀態', () => {
 
 describe('群組：後端回傳順序可以交錯，畫面上同組要排在一起', () => {
   it('交錯到達的欄位會依群組歸位，且組內維持到達順序', () => {
+    // 到達順序：基本、營養、基本、廠商、營養 → 組內應是 1,3 與 2,5
     const fields = [
       toReviewField(apiField({ id: '1', label: '品名', group: '基本資料' })),
       toReviewField(apiField({ id: '2', label: '熱量', group: '營養標示', required: false })),
@@ -159,6 +168,7 @@ describe('修改與確認', () => {
   })
 
   it('把已填的必填清掉會再次擋送出', () => {
+    // 使用者把有效日期刪光，status 要回到 pending
     const start = [
       toReviewField(apiField({ id: 'a', label: '品名', value: '火腿', required: true })),
       toReviewField(
@@ -180,11 +190,13 @@ describe('修改與確認', () => {
   })
 
   it('空的必填不能被標成已確認', () => {
+    // 防呆：確認鈕在 UI 上也不該出現，但函式本身也要擋
     const start = [toReviewField(apiField({ value: '', confidence: null, required: true }))]
     expect(acceptField(start, 'f1')[0].status).toBe('pending')
   })
 
   it('選候選值會接受該欄，選到非首選會標成已修改', () => {
+    // 第一個候選是系統首選；選第二個代表使用者改過
     const start = [
       toReviewField(
         apiField({
@@ -200,6 +212,7 @@ describe('修改與確認', () => {
   })
 
   it('重設會回到系統抽出的值與待確認狀態', () => {
+    // originalValue 是空字串時，還原後還是缺漏
     const start = [
       toReviewField(apiField({ value: '', confidence: null, required: true })),
     ]
@@ -210,6 +223,7 @@ describe('修改與確認', () => {
   })
 
   it('送出前會抽出三個法規必填的值', () => {
+    // 對應 Supabase 欄位 product_name / expiry_date / vendor_name
     const fields = [
       toReviewField(apiField({ id: 'a', label: '品名', value: '經典原味火腿', required: true })),
       toReviewField(

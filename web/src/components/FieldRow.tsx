@@ -1,3 +1,10 @@
+/**
+ * 單一欄位列。九種資訊不平均攤開：
+ * 主視覺是名稱 + 輸入框；必填用 *；缺漏 / 需確認才出標籤；頁碼降成 p.2；
+ * 把握度不顯示百分比（低把握已經用左側色條跟「需確認」表達）。
+ *
+ * memo：父層每進來一筆 SSE 都會重畫清單。callback 是穩定的，沒改過的列可以跳過 render。
+ */
 import { memo } from 'react'
 import type { ReviewField } from '../types'
 
@@ -9,6 +16,7 @@ type Props = {
   onReset: (id: string) => void
 }
 
+/** 左側色條：紅=必填空、橘=需確認、無色=安靜的高把握列。 */
 function tone(field: ReviewField): 'danger' | 'warn' | 'plain' {
   if (field.required && field.value.trim() === '') return 'danger'
   if (field.status === 'pending') return 'warn'
@@ -31,6 +39,7 @@ export const FieldRow = memo(function FieldRow({ field, onChange, onConfirm, onP
             : 'border-transparent'
       }`}
     >
+      {/* 名稱是主標；* 只給必填，不做大徽章 */}
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <label htmlFor={inputId} className="text-sm font-medium text-ink">
           {field.label}
@@ -48,6 +57,7 @@ export const FieldRow = memo(function FieldRow({ field, onChange, onConfirm, onP
         </p>
       </div>
 
+      {/* 值本身就是輸入框，不必再另開「編輯模式」 */}
       <input
         id={inputId}
         value={field.value}
@@ -58,11 +68,13 @@ export const FieldRow = memo(function FieldRow({ field, onChange, onConfirm, onP
         className="mt-1.5 w-full rounded-sm border border-line bg-card px-3 py-2 text-sm text-ink outline-none focus:border-accent"
       />
 
+      {/* 約一成欄位才有候選。沒有就不佔空間 */}
       {field.candidates && field.candidates.length > 0 ? (
         <fieldset className="mt-2">
           <legend className="text-xs text-muted">系統抽出多個候選值，請選擇其一，或直接修改欄位內容</legend>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             {field.candidates.map((candidate) => {
+              // 已確認且值等於這個候選 → 實心；值相同但還沒確認 → 橘框
               const selected = field.value === candidate && field.status !== 'pending'
               return (
                 <button
@@ -86,6 +98,7 @@ export const FieldRow = memo(function FieldRow({ field, onChange, onConfirm, onP
         </fieldset>
       ) : null}
 
+      {/* 高把握且沒改過：不顯示確認鈕，避免 120 列都要點一次 */}
       {field.status === 'pending' || changed ? (
         <div className="mt-2 flex gap-2">
           {field.status === 'pending' && !missing ? (

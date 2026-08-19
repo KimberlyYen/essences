@@ -1,3 +1,7 @@
+/**
+ * 審核結果寫入 / 讀出 Supabase 的 reviews 表。
+ * 只存三個法規必填。表要先跑 supabase/reviews.sql，否則 insert / select 會失敗。
+ */
 import { canSubmit, requiredReviewRow, type RequiredReviewRow } from './fields'
 import { createClient } from './supabase/client'
 import type { ReviewField } from '../types'
@@ -7,6 +11,7 @@ export type SavedReview = RequiredReviewRow & {
   created_at: string
 }
 
+/** 把 PostgREST 的英文錯誤翻成畫面上能看懂的句子。 */
 function saveErrorMessage(message: string): string {
   if (message.includes('Could not find the table') || message.includes('schema cache')) {
     return '資料表 reviews 尚未建立。請到 Supabase SQL Editor 執行 supabase/reviews.sql。'
@@ -18,6 +23,7 @@ function saveErrorMessage(message: string): string {
 }
 
 function asString(value: unknown, fallback = ''): string {
+  // Supabase 沒有生成 types 時，列的值是 unknown，先收成字串再畫
   return typeof value === 'string' ? value : fallback
 }
 
@@ -52,6 +58,7 @@ export async function listRequiredReviews(): Promise<SavedReview[]> {
     throw new Error(saveErrorMessage(error.message))
   }
 
+  // 不直接 as SavedReview[]，逐欄轉成字串，避免 API 回意外型別時畫面炸掉
   return (data ?? []).map((row) => ({
     id: asString(row.id),
     filename: asString(row.filename),

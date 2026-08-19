@@ -1,10 +1,13 @@
 <!doctype html>
+<!-- 整份 app 的殼。React 會把畫面畫進 #root。 -->
 <html lang="zh-Hant">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- 手機寬度不要被縮放成桌面版再縮小 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>essences — 文件欄位審核</title>
+    <!-- 標題用 Fraunces、內文用 IBM Plex Sans；preconnect 讓字體下載快一點 -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -14,6 +17,7 @@
   </head>
   <body>
     <div id="root"></div>
+    <!-- type=module 才能 import .tsx；Vite 開發時會把這支轉成瀏覽器看得懂的 JS -->
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
