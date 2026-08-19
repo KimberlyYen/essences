@@ -1,0 +1,28 @@
+{
+  "services": {
+    "frontend": {
+      "root": "web/",
+      "framework": "vite"
+    },
+    "backend": {
+      "root": "api/",
+      "framework": "fastapi",
+      "entrypoint": "index:app",
+      "functions": {
+        "index.py": {
+          "maxDuration": 60
+        }
+      }
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": { "service": "backend" }
+    },
+    {
+      "source": "/(.*)",
+      "destination": { "service": "frontend" }
+    }
+  ]
+}

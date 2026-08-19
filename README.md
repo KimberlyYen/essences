@@ -31,6 +31,18 @@ Vite 會把 `/api` proxy 到 `localhost:8000`。
 
 上傳頁底部有「測試用選項」：欄位數、速度、`fail_at`（模擬解析中途掛掉）。
 
+## 推上 Vercel
+
+根目錄 `vercel.json` 用 Vercel Services：`web/` 當 Vite 前端，`api/` 當 FastAPI。`api/server.py` 沒改，多一個 `api/index.py` 當 serverless 入口。
+
+Dashboard 還要設這三件事，否則看起來會像失敗：
+
+1. **Settings → General → Framework Preset** 選 `Services`。沒選的話 `vercel.json` 的 `services` 會被忽略。
+2. **Settings → Deployment Protection** 關掉 Vercel Authentication，否則沒登入會被轉去 SSO。
+3. **Settings → Environment Variables** 加上 `VITE_SUPABASE_URL`、`VITE_SUPABASE_PUBLISHABLE_KEY`（跟 `web/.env.local` 一樣）。Vite 只吃 `VITE_` 開頭，Dashboard 預設的 `NEXT_PUBLIC_` 無效。
+
+線上解析有 60 秒上限；上百欄時把測試選項的速度調高。驗證作業本身仍以 `docker compose up` 為準。
+
 ## 這張 AI 參考圖最嚴重的三個問題
 
 參考圖是一張 11 欄的資料表，120 列全是「未確認」。

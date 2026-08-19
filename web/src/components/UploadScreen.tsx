@@ -11,9 +11,10 @@ type Props = {
   notice: string | null
   onStart: (file: File, params: ExtractParams) => void
   onViewRecords: () => void
+  onViewTests: () => void
 }
 
-export function UploadScreen({ busy, notice, onStart, onViewRecords }: Props) {
+export function UploadScreen({ busy, notice, onStart, onViewRecords, onViewTests }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [file, setFile] = useState<File | null>(null)
   const [dragOver, setDragOver] = useState(false)
@@ -28,13 +29,22 @@ export function UploadScreen({ busy, notice, onStart, onViewRecords }: Props) {
     <main className="mx-auto flex min-h-dvh max-w-xl flex-col justify-center px-5 py-16">
       <div className="flex items-baseline justify-between gap-4">
         <p className="font-serif text-sm tracking-wide text-accent">essences</p>
-        <button
-          type="button"
-          onClick={onViewRecords}
-          className="text-sm text-accent hover:underline"
-        >
-          已儲存紀錄
-        </button>
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={onViewTests}
+            className="text-sm text-accent hover:underline"
+          >
+            測試報告
+          </button>
+          <button
+            type="button"
+            onClick={onViewRecords}
+            className="text-sm text-accent hover:underline"
+          >
+            已儲存紀錄
+          </button>
+        </div>
       </div>
       {/* 標題說這頁在幹嘛；說明把必填規則講清楚 */}
       <h1 className="mt-3 font-serif text-4xl leading-tight text-ink">文件欄位審核</h1>

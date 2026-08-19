@@ -10,7 +10,9 @@ const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
 
 export function createClient() {
   if (!supabaseUrl || !supabaseKey) {
-    throw new Error('缺少 VITE_SUPABASE_URL 或 VITE_SUPABASE_PUBLISHABLE_KEY')
+    throw new Error(
+      '缺少 VITE_SUPABASE_URL 或 VITE_SUPABASE_PUBLISHABLE_KEY。本機放 web/.env.local；Vercel 要在 Project Settings → Environment Variables 加這兩個（必須是 VITE_ 開頭）。',
+    )
   }
 
   return createBrowserClient(supabaseUrl, supabaseKey)
