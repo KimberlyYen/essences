@@ -78,6 +78,11 @@ body {
   top: 0.75rem;
 }
 
+/* native date input 在淺色紙底上不要被系統暗色配色帶跑 */
+input[type='date'] {
+  color-scheme: light;
+}
+
 /* 開了減少動態的人，進度條不要滑過去 */
 @media (prefers-reduced-motion: reduce) {
   .progress-fill {

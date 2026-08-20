@@ -6,7 +6,7 @@
 import { GROUPS, type FilterId } from '../types'
 import { FieldRow } from './FieldRow'
 import type { ReviewSession } from '../hooks/useReviewSession'
-import { groupFields, needsReview } from '../lib/fields'
+import { groupFields, isGroup, needsReview } from '../lib/fields'
 
 type Props = {
   session: ReviewSession
@@ -44,6 +44,23 @@ export function Workspace({ session }: Props) {
   const progressLabel = extract.total
     ? `${extract.fields.length}/${extract.total}`
     : `${extract.progress}%`
+
+  // 紅條點欄位名：先解除篩選，再捲到輸入框並 focus
+  function jumpToMissingField(label: string) {
+    const field = extract.fields.find((item) => item.label === label)
+    if (!field) return
+    setFilter('all')
+    setActiveGroup(isGroup(field.group) ? field.group : 'all')
+    const inputId = `field-${field.id}`
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const input = document.getElementById(inputId)
+        if (!input) return
+        input.scrollIntoView({ block: 'center', behavior: 'smooth' })
+        input.focus()
+      })
+    })
+  }
 
   return (
     <div className="min-h-dvh pb-[max(1.5rem,env(safe-area-inset-bottom))]" aria-busy={extracting}>
@@ -135,7 +152,27 @@ export function Workspace({ session }: Props) {
         {missing.length > 0 ? (
           <div className="border-t border-danger/20 bg-danger-bg" role="alert" id="missing-required">
             <p className="mx-auto max-w-5xl px-4 py-2 text-sm text-danger">
-              以下法規必填欄位尚未填寫，無法送出：{missing.join('、')}。
+              以下法規必填欄位尚未填寫，無法送出：
+              {missing.map((label, index) => {
+                const field = extract.fields.find((item) => item.label === label)
+                return (
+                  <span key={label}>
+                    {index > 0 ? '、' : null}
+                    {field ? (
+                      <button
+                        type="button"
+                        onClick={() => jumpToMissingField(label)}
+                        className="underline decoration-danger/50 underline-offset-2 hover:decoration-danger"
+                      >
+                        {label}
+                      </button>
+                    ) : (
+                      <span>{label}</span>
+                    )}
+                  </span>
+                )
+              })}
+              。
             </p>
           </div>
         ) : null}

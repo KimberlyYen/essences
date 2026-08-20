@@ -16,6 +16,9 @@ import {
   shouldStartPending,
   toReviewField,
   updateFieldValue,
+  fromDateInputValue,
+  isDateFieldLabel,
+  toDateInputValue,
 } from './fields'
 
 /** 測資工廠：只覆寫要測的欄位，其餘用合理預設。 */
@@ -246,5 +249,22 @@ describe('修改與確認', () => {
       expiry_date: '2027/01/08',
       vendor_name: '某某食品股份有限公司',
     })
+  })
+})
+
+describe('日期選單與儲存格式', () => {
+  it('有效日期、製造日期用日期選單；保存期限仍是文字', () => {
+    expect(isDateFieldLabel('有效日期')).toBe(true)
+    expect(isDateFieldLabel('有效日期（2）')).toBe(true)
+    expect(isDateFieldLabel('製造日期')).toBe(true)
+    expect(isDateFieldLabel('保存期限')).toBe(false)
+    expect(isDateFieldLabel('品名')).toBe(false)
+  })
+
+  it('date input 的 ISO 值要轉回 mock 用的 2027/01/08', () => {
+    expect(toDateInputValue('2027/01/08')).toBe('2027-01-08')
+    expect(fromDateInputValue('2027-01-08')).toBe('2027/01/08')
+    expect(toDateInputValue('')).toBe('')
+    expect(fromDateInputValue('')).toBe('')
   })
 })

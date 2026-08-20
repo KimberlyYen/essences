@@ -7,6 +7,7 @@
  */
 import { memo } from 'react'
 import type { ReviewField } from '../types'
+import { fromDateInputValue, isDateFieldLabel, toDateInputValue } from '../lib/fields'
 
 type Props = {
   field: ReviewField
@@ -28,6 +29,7 @@ export const FieldRow = memo(function FieldRow({ field, onChange, onConfirm, onP
   const missing = field.required && field.value.trim() === ''
   const inputId = `field-${field.id}`
   const changed = field.value !== field.originalValue
+  const dateField = isDateFieldLabel(field.label)
 
   return (
     <article
@@ -60,16 +62,28 @@ export const FieldRow = memo(function FieldRow({ field, onChange, onConfirm, onP
         </p>
       </div>
 
-      {/* 值本身就是輸入框，不必再另開「編輯模式」 */}
-      <input
-        id={inputId}
-        value={field.value}
-        onChange={(event) => onChange(field.id, event.target.value)}
-        aria-required={field.required}
-        aria-invalid={missing}
-        placeholder={missing ? '文件中未抽出，請自行填寫' : undefined}
-        className="mt-1.5 w-full min-h-11 rounded-sm border border-line bg-card px-3 py-2 text-sm text-ink"
-      />
+      {/* 有效日期等用系統日期選單；存進狀態仍是 2027/01/08，跟 mock / 測試一致 */}
+      {dateField ? (
+        <input
+          id={inputId}
+          type="date"
+          value={toDateInputValue(field.value)}
+          onChange={(event) => onChange(field.id, fromDateInputValue(event.target.value))}
+          aria-required={field.required}
+          aria-invalid={missing}
+          className="mt-1.5 w-full min-h-11 scroll-mt-44 rounded-sm border border-line bg-card px-3 py-2 text-sm text-ink"
+        />
+      ) : (
+        <input
+          id={inputId}
+          value={field.value}
+          onChange={(event) => onChange(field.id, event.target.value)}
+          aria-required={field.required}
+          aria-invalid={missing}
+          placeholder={missing ? '文件中未抽出，請自行填寫' : undefined}
+          className="mt-1.5 w-full min-h-11 scroll-mt-44 rounded-sm border border-line bg-card px-3 py-2 text-sm text-ink"
+        />
+      )}
 
       {/* 約一成欄位才有候選。沒有就不佔空間 */}
       {field.candidates && field.candidates.length > 0 ? (

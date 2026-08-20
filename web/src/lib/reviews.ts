@@ -1,20 +1,20 @@
 /**
  * 審核結果寫入 / 讀出 Supabase 的 reviews 表。
- * 只存三個法規必填。表要先跑 supabase/reviews.sql，否則 insert / select 會失敗。
+ * 三個法規必填各一欄，全部欄位放 fields jsonb。表要先跑 supabase/reviews.sql。
  */
-import { canSubmit, requiredReviewRow, type RequiredReviewRow } from './fields'
+import { canSubmit, payloadForSubmit, requiredReviewRow, type FieldSnapshot, type RequiredReviewRow } from './fields'
 import { createClient } from './supabase/client'
-import type { ReviewField } from '../types'
+import type { FieldStatus, ReviewField } from '../types'
 
 export type SavedReview = RequiredReviewRow & {
   id: string
   created_at: string
+  fields: FieldSnapshot[]
 }
 
-/** 把 PostgREST 的英文錯誤翻成畫面上能看懂的句子。 */
 function saveErrorMessage(message: string): string {
   if (message.includes('Could not find the table') || message.includes('schema cache')) {
-    return '資料表 reviews 尚未建立。請到 Supabase SQL Editor 執行 supabase/reviews.sql。'
+    return '資料表 reviews 尚未建立，或還沒有 fields 欄位。請到 Supabase SQL Editor 再執行一次 supabase/reviews.sql。'
   }
   if (message.toLowerCase().includes('row-level security') || message.includes('RLS')) {
     return '存取被拒絕。請確認 reviews 資料表已開放 anon 的 insert / select 政策。'
@@ -23,8 +23,70 @@ function saveErrorMessage(message: string): string {
 }
 
 function asString(value: unknown, fallback = ''): string {
-  // Supabase 沒有生成 types 時，列的值是 unknown，先收成字串再畫
   return typeof value === 'string' ? value : fallback
+}
+
+const STATUSES: FieldStatus[] = ['pending', 'accepted', 'edited']
+
+function asStatus(value: unknown): FieldStatus {
+  return STATUSES.includes(value as FieldStatus) ? (value as FieldStatus) : 'accepted'
+}
+
+/** jsonb / 舊資料都收成快照；壞掉的列直接跳過。 */
+export function parseFieldSnapshots(value: unknown): FieldSnapshot[] {
+  if (!Array.isArray(value)) return []
+  const snapshots: FieldSnapshot[] = []
+  for (const item of value) {
+    if (!item || typeof item !== 'object') continue
+    const row = item as Record<string, unknown>
+    snapshots.push({
+      id: asString(row.id),
+      label: asString(row.label),
+      group: asString(row.group, '基本資料'),
+      value: asString(row.value),
+      required: Boolean(row.required),
+      status: asStatus(row.status),
+      page: typeof row.page === 'number' ? row.page : 1,
+    })
+  }
+  return snapshots
+}
+
+/**
+ * 點進去要看的欄位。
+ * 新紀錄用 fields jsonb；舊紀錄沒快照時，至少把三個必填攤出來，不要空白頁。
+ */
+export function detailFieldsFromSaved(row: SavedReview): FieldSnapshot[] {
+  if (row.fields.length > 0) return row.fields
+  return [
+    {
+      id: 'product_name',
+      label: '品名',
+      group: '基本資料',
+      value: row.product_name,
+      required: true,
+      status: 'accepted',
+      page: 1,
+    },
+    {
+      id: 'expiry_date',
+      label: '有效日期',
+      group: '基本資料',
+      value: row.expiry_date,
+      required: true,
+      status: 'accepted',
+      page: 1,
+    },
+    {
+      id: 'vendor_name',
+      label: '廠商名稱',
+      group: '廠商資訊',
+      value: row.vendor_name,
+      required: true,
+      status: 'accepted',
+      page: 1,
+    },
+  ]
 }
 
 export async function saveRequiredReview(
@@ -38,7 +100,10 @@ export async function saveRequiredReview(
 
   const row = requiredReviewRow(filename, documentId, fields)
   const supabase = createClient()
-  const { error } = await supabase.from('reviews').insert(row)
+  const { error } = await supabase.from('reviews').insert({
+    ...row,
+    fields: payloadForSubmit(fields),
+  })
 
   if (error) {
     throw new Error(saveErrorMessage(error.message))
@@ -51,14 +116,13 @@ export async function listRequiredReviews(): Promise<SavedReview[]> {
   const supabase = createClient()
   const { data, error } = await supabase
     .from('reviews')
-    .select('id, filename, document_id, product_name, expiry_date, vendor_name, created_at')
+    .select('id, filename, document_id, product_name, expiry_date, vendor_name, fields, created_at')
     .order('created_at', { ascending: false })
 
   if (error) {
     throw new Error(saveErrorMessage(error.message))
   }
 
-  // 不直接 as SavedReview[]，逐欄轉成字串，避免 API 回意外型別時畫面炸掉
   return (data ?? []).map((row) => ({
     id: asString(row.id),
     filename: asString(row.filename),
@@ -67,5 +131,6 @@ export async function listRequiredReviews(): Promise<SavedReview[]> {
     expiry_date: asString(row.expiry_date),
     vendor_name: asString(row.vendor_name),
     created_at: asString(row.created_at),
+    fields: parseFieldSnapshots(row.fields),
   }))
 }

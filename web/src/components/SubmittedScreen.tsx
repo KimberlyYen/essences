@@ -21,7 +21,7 @@ export function SubmittedScreen({ filename, fields, saved, onAgain, onViewRecord
       <p className="font-serif text-sm text-accent">已送出</p>
       <h1 className="mt-3 font-serif text-3xl text-ink sm:text-4xl">審核結果已寫入 Supabase</h1>
       <p className="mt-4 text-base leading-7 text-ink-soft">
-        本次只儲存法規必填欄位：品名、有效日期、廠商名稱。
+        三個法規必填已寫入。點「查看已儲存紀錄」可看該次送出的全部欄位。
       </p>
       {/* saved 是剛 insert 成功的那一列；沒有的話退回檔名 */}
       <dl className="mt-8 grid grid-cols-1 gap-4 text-sm">

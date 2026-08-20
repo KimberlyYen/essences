@@ -2,7 +2,7 @@
  * 欄位規則集中在這裡，不放進 React。
  * 送出能不能按、要不要標「需檢查」、怎麼分組，面試被問「拿掉會怎樣」就是這檔。
  */
-import { GROUPS, type ApiField, type Group, type ReviewField } from '../types'
+import { GROUPS, type ApiField, type FieldStatus, type Group, type ReviewField } from '../types'
 
 /**
  * 後端低把握大約 0.31–0.68，高把握大約 0.82–0.99。
@@ -147,8 +147,18 @@ export function resetField(fields: ReviewField[], id: string): ReviewField[] {
   })
 }
 
-/** 送出當下的完整欄位快照（畫面上統計用，不是寫進 Supabase 的那包）。 */
-export function payloadForSubmit(fields: ReviewField[]) {
+/** 送出當下的完整欄位快照，寫進 reviews.fields，點進去才能看詳細。 */
+export type FieldSnapshot = {
+  id: string
+  label: string
+  group: string
+  value: string
+  required: boolean
+  status: FieldStatus
+  page: number
+}
+
+export function payloadForSubmit(fields: ReviewField[]): FieldSnapshot[] {
   return fields.map((field) => ({
     id: field.id,
     label: field.label,
@@ -184,4 +194,24 @@ export function requiredReviewRow(
     expiry_date: valueOf('有效日期'),
     vendor_name: valueOf('廠商名稱'),
   }
+}
+
+/** 標籤含「日期」才用日期選單，例如有效日期、製造日期。保存期限不含「日期」。 */
+export function isDateFieldLabel(label: string): boolean {
+  return label.includes('日期')
+}
+
+/** 畫面存 2027/01/08；native date input 要 2027-01-08。 */
+export function toDateInputValue(value: string): string {
+  const match = value.trim().match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$/)
+  if (!match) return ''
+  const [, year, month, day] = match
+  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
+}
+
+/** date input 清空時回空字串，讓必填缺漏規則繼續擋送出。 */
+export function fromDateInputValue(iso: string): string {
+  const match = iso.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!match) return ''
+  return `${match[1]}/${match[2]}/${match[3]}`
 }
