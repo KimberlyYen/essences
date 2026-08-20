@@ -7,6 +7,7 @@ import type { ApiField, ReviewField } from '../types'
 import {
   acceptField,
   canSubmit,
+  ensureRequiredFields,
   groupFields,
   isMissingRequired,
   needsReview,
@@ -14,6 +15,7 @@ import {
   pickCandidate,
   requiredReviewRow,
   resetField,
+  shouldCollapseGroups,
   shouldStartPending,
   toReviewField,
   updateFieldValue,
@@ -100,6 +102,32 @@ describe('送出條件：法規必填不能空', () => {
     expect(canSubmit(fields)).toBe(false)
   })
 
+  it('串流停了之後，缺席的必填要補成空白列；填完才能送，已抽出的值不能被蓋掉', () => {
+    const partial: ReviewField[] = [
+      toReviewField(
+        apiField({
+          id: 'd',
+          label: '鈉',
+          group: '營養標示',
+          value: '890 毫克',
+          required: false,
+        }),
+      ),
+    ]
+    const padded = ensureRequiredFields(partial)
+    expect(padded.map((field) => field.label)).toEqual(['鈉', '品名', '有效日期', '廠商名稱'])
+    expect(padded[0].value).toBe('890 毫克')
+    expect(canSubmit(padded)).toBe(false)
+
+    const filled = ['品名', '有效日期', '廠商名稱'].reduce(
+      (fields, label, index) =>
+        updateFieldValue(fields, `missing-${label}`, ['黑胡椒香腸', '2027/04/10', '好味食品'][index]),
+      padded,
+    )
+    expect(canSubmit(filled)).toBe(true)
+    expect(ensureRequiredFields(padded)).toEqual(padded)
+  })
+
   it('必填只填空白字元仍視為缺漏', () => {
     const field = toReviewField(apiField({ value: '   ', required: true, confidence: null }))
     expect(isMissingRequired(field)).toBe(true)
@@ -144,6 +172,12 @@ describe('群組：後端回傳順序可以交錯，畫面上同組要排在一�
     expect(grouped.get('營養標示')?.map((field) => field.id)).toEqual(['2', '5'])
     expect(grouped.get('廠商資訊')?.map((field) => field.id)).toEqual(['4'])
     expect(grouped.get('檢驗結果')).toEqual([])
+  })
+
+  it('看全部又沒鎖群組時才收合，避免上百欄變成無限捲軸', () => {
+    expect(shouldCollapseGroups('all', 'all')).toBe(true)
+    expect(shouldCollapseGroups('review', 'all')).toBe(false)
+    expect(shouldCollapseGroups('all', '基本資料')).toBe(false)
   })
 })
 

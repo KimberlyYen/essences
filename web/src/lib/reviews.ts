@@ -24,7 +24,7 @@ function saveErrorMessage(message: string): string {
     return '資料表 reviews 尚未建立，或還沒有 fields 欄位。請到 Supabase SQL Editor 再執行一次 supabase/reviews.sql。'
   }
   if (message.toLowerCase().includes('row-level security') || message.includes('RLS')) {
-    return '存取被拒絕。請到 Supabase SQL Editor 再執行一次 supabase/reviews.sql，確認已開放 anon 的 insert / select / update。'
+    return '存取被拒絕。請到 Supabase SQL Editor 再執行一次 supabase/reviews.sql，確認已開放 anon 的 insert / select / update / delete。'
   }
   return `無法連線 Supabase：${message}`
 }
@@ -197,6 +197,14 @@ export async function updateSavedReview(id: string, original: FieldSnapshot[], d
   }
 
   return mapSavedReview((data ?? {}) as Record<string, unknown>)
+}
+
+export async function deleteSavedReview(id: string): Promise<void> {
+  const supabase = createClient()
+  const { error } = await supabase.from('reviews').delete().eq('id', id)
+  if (error) {
+    throw new Error(saveErrorMessage(error.message))
+  }
 }
 
 export async function listRequiredReviews(): Promise<SavedReview[]> {

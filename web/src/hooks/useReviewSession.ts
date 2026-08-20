@@ -8,6 +8,7 @@ import { saveRequiredReview } from '../lib/reviews'
 import {
   acceptField,
   canSubmit,
+  ensureRequiredFields,
   groupFields,
   missingRequiredLabels,
   needsReview,
@@ -38,7 +39,7 @@ export function useReviewSession() {
   const [documentId, setDocumentId] = useState<string | null>(null)
   const [params, setParams] = useState<ExtractParams>(defaultParams)
   const [extract, setExtract] = useState<ExtractState>(initialExtractState)
-  const [filter, setFilter] = useState<FilterId>('all')
+  const [filter, setFilter] = useState<FilterId>('review')
   const [activeGroup, setActiveGroup] = useState<Group | 'all'>('all')
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
@@ -69,13 +70,18 @@ export function useReviewSession() {
       )
     } catch (error) {
       if (controller.signal.aborted) {
-        setExtract((current) => ({ ...current, cancelled: true }))
+        setExtract((current) => ({
+          ...current,
+          cancelled: true,
+          fields: ensureRequiredFields(current.fields),
+        }))
         return
       }
       const message = error instanceof Error ? error.message : '解析失敗'
       setExtract((current) => ({
         ...current,
         error: { message, code: 'CLIENT' },
+        fields: ensureRequiredFields(current.fields),
       }))
     } finally {
       setBusy(false)
@@ -117,7 +123,7 @@ export function useReviewSession() {
     setFilename('')
     setDocumentId(null)
     setExtract(initialExtractState)
-    setFilter('all')
+    setFilter('review')
     setActiveGroup('all')
     setNotice(null)
     setBusy(false)

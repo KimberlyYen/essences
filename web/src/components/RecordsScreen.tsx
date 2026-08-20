@@ -3,7 +3,7 @@
  * 清單只顯示三個必填；點進去才看全部欄位。
  */
 import { useCallback, useEffect, useState } from 'react'
-import { listRequiredReviews, type SavedReview } from '../lib/reviews'
+import { deleteSavedReview, listRequiredReviews, type SavedReview } from '../lib/reviews'
 import { RecordDetail } from './RecordDetail'
 
 type Props = {
@@ -21,6 +21,7 @@ export function RecordsScreen({ onBack }: Props) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -39,6 +40,23 @@ export function RecordsScreen({ onBack }: Props) {
     void load()
   }, [load])
 
+  async function remove(row: SavedReview) {
+    if (deletingId) return
+    const label = row.product_name.trim() || row.filename
+    if (!window.confirm(`確定刪除「${label}」這筆紀錄？`)) return
+    setDeletingId(row.id)
+    setError(null)
+    try {
+      await deleteSavedReview(row.id)
+      setRows((current) => current.filter((item) => item.id !== row.id))
+      if (selectedId === row.id) setSelectedId(null)
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : '刪除失敗')
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
   const selected = rows.find((row) => row.id === selectedId) ?? null
   if (selected) {
     return (
@@ -47,6 +65,10 @@ export function RecordsScreen({ onBack }: Props) {
         onBack={() => setSelectedId(null)}
         onSaved={(updated) => {
           setRows((current) => current.map((item) => (item.id === updated.id ? updated : item)))
+        }}
+        onDeleted={() => {
+          setRows((current) => current.filter((item) => item.id !== selected.id))
+          setSelectedId(null)
         }}
       />
     )
@@ -95,11 +117,11 @@ export function RecordsScreen({ onBack }: Props) {
         <>
           <ul className="mt-8 space-y-4 md:hidden">
             {rows.map((row) => (
-              <li key={row.id}>
+              <li key={row.id} className="rounded-sm border border-line bg-card">
                 <button
                   type="button"
                   onClick={() => setSelectedId(row.id)}
-                  className="w-full rounded-sm border border-line bg-card px-4 py-3 text-left text-sm hover:bg-paper-2"
+                  className="w-full px-4 py-3 text-left text-sm hover:bg-paper-2"
                 >
                   <p className="text-xs text-muted">{formatSavedAt(row.created_at)}</p>
                   <p className="mt-1 font-medium text-ink">{row.product_name}</p>
@@ -119,6 +141,16 @@ export function RecordsScreen({ onBack }: Props) {
                   </dl>
                   <p className="mt-3 text-xs text-accent">查看詳細欄位</p>
                 </button>
+                <div className="flex justify-end border-t border-line px-4 py-2">
+                  <button
+                    type="button"
+                    onClick={() => void remove(row)}
+                    disabled={deletingId === row.id}
+                    className="min-h-11 rounded-sm border border-danger/30 px-3 py-2 text-sm text-danger hover:bg-danger-bg disabled:opacity-40"
+                  >
+                    {deletingId === row.id ? '刪除中…' : '刪除'}
+                  </button>
+                </div>
               </li>
             ))}
           </ul>
@@ -131,7 +163,8 @@ export function RecordsScreen({ onBack }: Props) {
                   <th className="py-3 pr-4 font-medium">文件</th>
                   <th className="py-3 pr-4 font-medium">品名</th>
                   <th className="py-3 pr-4 font-medium">有效日期</th>
-                  <th className="py-3 font-medium">廠商名稱</th>
+                  <th className="py-3 pr-4 font-medium">廠商名稱</th>
+                  <th className="py-3 font-medium">操作</th>
                 </tr>
               </thead>
               <tbody>
@@ -154,9 +187,33 @@ export function RecordsScreen({ onBack }: Props) {
                     <td className="py-3 pr-4 text-ink">{row.filename}</td>
                     <td className="py-3 pr-4 text-ink">{row.product_name}</td>
                     <td className="py-3 pr-4 text-ink">{row.expiry_date}</td>
-                    <td className="py-3 text-ink">
-                      {row.vendor_name}
-                      <span className="ml-3 text-xs text-accent">詳細</span>
+                    <td className="py-3 pr-4 text-ink">{row.vendor_name}</td>
+                    <td className="py-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            setSelectedId(row.id)
+                          }}
+                          onKeyDown={(event) => event.stopPropagation()}
+                          className="min-h-11 rounded-sm border border-line bg-card px-3 py-2 text-sm text-ink hover:bg-paper-2"
+                        >
+                          詳細
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            void remove(row)
+                          }}
+                          onKeyDown={(event) => event.stopPropagation()}
+                          disabled={deletingId === row.id}
+                          className="min-h-11 rounded-sm border border-danger/30 px-3 py-2 text-sm text-danger hover:bg-danger-bg disabled:opacity-40"
+                        >
+                          {deletingId === row.id ? '刪除中…' : '刪除'}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

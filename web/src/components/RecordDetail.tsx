@@ -2,14 +2,16 @@
  * 單筆已儲存紀錄的詳細欄位。可編輯後寫回 Supabase。
  */
 import { useEffect, useState } from 'react'
-import { GROUPS, type FilterId, type ReviewField } from '../types'
-import { groupFields, needsReview, type FieldSnapshot } from '../lib/fields'
+import { GROUPS, type FilterId, type Group, type ReviewField } from '../types'
+import { groupFields, needsReview, shouldCollapseGroups, type FieldSnapshot } from '../lib/fields'
+import { candidatesForField } from '../lib/candidates'
 import {
   canSaveSnapshots,
   detailFieldsFromSaved,
   setSnapshotValue,
   snapshotsHaveChanges,
   updateSavedReview,
+  deleteSavedReview,
   type SavedReview,
 } from '../lib/reviews'
 
@@ -17,6 +19,7 @@ type Props = {
   row: SavedReview
   onBack: () => void
   onSaved: (row: SavedReview) => void
+  onDeleted: () => void
 }
 
 function formatSavedAt(value: string): string {
@@ -47,33 +50,39 @@ function asReviewFields(snapshots: FieldSnapshot[]): ReviewField[] {
   }))
 }
 
-export function RecordDetail({ row, onBack, onSaved }: Props) {
+export function RecordDetail({ row, onBack, onSaved, onDeleted }: Props) {
   const original = detailFieldsFromSaved(row)
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(original)
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [filter, setFilter] = useState<FilterId>('all')
-  const [openFieldId, setOpenFieldId] = useState<string | null>(null)
+  const [filter, setFilter] = useState<FilterId>('review')
+  const [activeGroup, setActiveGroup] = useState<Group | 'all'>('all')
+  const [openGroup, setOpenGroup] = useState<Group | null>(null)
 
   useEffect(() => {
     setDraft(detailFieldsFromSaved(row))
     setEditing(false)
     setError(null)
-    setFilter('all')
-    setOpenFieldId(null)
+    setFilter('review')
+    setActiveGroup('all')
+    setOpenGroup(null)
   }, [row])
 
   const snapshots = editing ? draft : original
   const reviewFields = asReviewFields(snapshots)
   const reviewCount = reviewFields.filter(needsReview).length
   const requiredCount = reviewFields.filter((field) => field.required).length
+  const grouped = groupFields(reviewFields)
   const visible = reviewFields.filter((field) => {
-    if (filter === 'review') return needsReview(field)
-    if (filter === 'required') return field.required
+    if (filter === 'review' && !needsReview(field)) return false
+    if (filter === 'required' && !field.required) return false
+    if (activeGroup !== 'all' && field.group !== activeGroup) return false
     return true
   })
-  const grouped = groupFields(visible)
+  const visibleGrouped = groupFields(visible)
+  const accordion = shouldCollapseGroups(filter, activeGroup)
   const fromSnapshot = row.fields.length > 0
   const dirty = snapshotsHaveChanges(original, draft)
   const ready = canSaveSnapshots(draft)
@@ -83,14 +92,12 @@ export function RecordDetail({ row, onBack, onSaved }: Props) {
     setDraft(detailFieldsFromSaved(row))
     setError(null)
     setEditing(true)
-    setOpenFieldId(null)
   }
 
   function cancelEdit() {
     setDraft(detailFieldsFromSaved(row))
     setError(null)
     setEditing(false)
-    setOpenFieldId(null)
   }
 
   async function save() {
@@ -100,11 +107,26 @@ export function RecordDetail({ row, onBack, onSaved }: Props) {
     try {
       onSaved(await updateSavedReview(row.id, original, draft))
       setEditing(false)
-      setOpenFieldId(null)
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : '儲存失敗')
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function remove() {
+    if (deleting) return
+    const label = title.trim() || row.filename
+    if (!window.confirm(`確定刪除「${label}」這筆紀錄？`)) return
+    setDeleting(true)
+    setError(null)
+    try {
+      await deleteSavedReview(row.id)
+      onDeleted()
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : '刪除失敗')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -147,20 +169,26 @@ export function RecordDetail({ row, onBack, onSaved }: Props) {
               </button>
             </div>
           ) : (
-            <button
-              type="button"
-              onClick={startEdit}
-              className="min-h-11 rounded-sm bg-accent px-3 py-2 text-sm font-medium text-white hover:bg-accent-hover"
-            >
-              編輯
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => void remove()}
+                disabled={deleting}
+                className="min-h-11 rounded-sm border border-danger/30 px-3 py-2 text-sm text-danger hover:bg-danger-bg disabled:opacity-40"
+              >
+                {deleting ? '刪除中…' : '刪除'}
+              </button>
+              <button
+                type="button"
+                onClick={startEdit}
+                disabled={deleting}
+                className="min-h-11 rounded-sm bg-accent px-3 py-2 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-40"
+              >
+                編輯
+              </button>
+            </div>
           )}
         </div>
-        <nav aria-label="篩選" className="mx-auto flex max-w-5xl gap-2 overflow-x-auto px-4 pb-3">
-          <FilterButton current={filter} id="all" onClick={setFilter} label={`全部 ${reviewFields.length}`} />
-          <FilterButton current={filter} id="review" onClick={setFilter} label={`需檢查 ${reviewCount}`} />
-          <FilterButton current={filter} id="required" onClick={setFilter} label={`必填 ${requiredCount}`} />
-        </nav>
         {error ? (
           <div className="border-t border-danger/20 bg-danger-bg" role="alert">
             <p className="mx-auto max-w-5xl px-4 py-2 text-sm text-danger">{error}</p>
@@ -175,32 +203,95 @@ export function RecordDetail({ row, onBack, onSaved }: Props) {
         ) : null}
       </header>
 
-      <main id="main" className="mx-auto max-w-5xl px-4 py-8">
+      <div className="mx-auto grid max-w-5xl gap-8 px-4 py-6 md:grid-cols-[13rem_1fr]">
+        <aside className="md:sticky md:top-24 md:self-start">
+          <nav aria-label="篩選" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:flex-col md:gap-1 md:px-0">
+            <FilterButton current={filter} id="all" onClick={setFilter} label={`全部 ${reviewFields.length}`} />
+            <FilterButton current={filter} id="review" onClick={setFilter} label={`需檢查 ${reviewCount}`} />
+            <FilterButton current={filter} id="required" onClick={setFilter} label={`必填 ${requiredCount}`} />
+          </nav>
+          <nav aria-label="欄位群組" className="-mx-4 mt-5 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:flex-col md:gap-1 md:px-0">
+            <button
+              type="button"
+              onClick={() => setActiveGroup('all')}
+              aria-current={activeGroup === 'all' ? 'true' : undefined}
+              className={navClass(activeGroup === 'all')}
+            >
+              所有群組
+            </button>
+            {GROUPS.map((group) => {
+              const count = grouped.get(group)?.length ?? 0
+              const reviewInGroup = grouped.get(group)?.filter(needsReview).length ?? 0
+              if (count === 0) return null
+              return (
+                <button
+                  key={group}
+                  type="button"
+                  onClick={() => setActiveGroup(group)}
+                  aria-current={activeGroup === group ? 'true' : undefined}
+                  className={navClass(activeGroup === group)}
+                >
+                  <span>{group}</span>
+                  <span className="text-muted">
+                    {count}
+                    {reviewInGroup ? ` · ${reviewInGroup}` : ''}
+                  </span>
+                </button>
+              )
+            })}
+          </nav>
+        </aside>
+
+        <main id="main">
         {!fromSnapshot ? (
           <p className="mb-8 text-sm text-muted">
             這筆只存了法規必填。儲存後會留下完整欄位快照。
           </p>
         ) : (
           <p className="mb-8 text-sm text-ink-soft">
-            橘色是需檢查：送出時還沒確認的欄位。點上方「需檢查」只看這些。
+            橘色是需檢查。有其他可能值的欄位，選項會列在輸入框下面，可點選或自己填。
           </p>
         )}
 
+        {accordion ? (
+          <p className="mb-6 text-sm text-ink-soft">
+            欄位數量隨文件變化，全部攤開會變成一條很長的捲軸。點群組標題展開該組，或改用左側「需檢查」。
+          </p>
+        ) : null}
+
         {GROUPS.map((group) => {
-          const fields = grouped.get(group) ?? []
+          const fields = visibleGrouped.get(group) ?? []
           if (fields.length === 0) return null
+          const expanded = !accordion || openGroup === group
           return (
             <section key={group} className="mb-10">
-              <h2 className="mb-2 font-serif text-xl text-ink">
-                {group}
-                <span className="ml-2 font-sans text-sm text-muted">{fields.length}</span>
+              <h2 className="mb-2 bg-paper/95 px-1 py-2 font-serif text-xl text-ink md:sticky md:top-20 md:z-10 md:-mx-1 md:backdrop-blur">
+                {accordion ? (
+                  <button
+                    type="button"
+                    onClick={() => setOpenGroup(openGroup === group ? null : group)}
+                    aria-expanded={expanded}
+                    className="flex min-h-11 w-full items-center justify-between gap-3 text-left"
+                  >
+                    <span>
+                      {group}
+                      <span className="ml-2 font-sans text-sm text-muted">{fields.length}</span>
+                    </span>
+                    <span className="font-sans text-sm font-normal text-accent">{expanded ? '收合' : '展開'}</span>
+                  </button>
+                ) : (
+                  <>
+                    {group}
+                    <span className="ml-2 font-sans text-sm text-muted">{fields.length}</span>
+                  </>
+                )}
               </h2>
+              {expanded ? (
               <dl className="divide-y divide-line border-t border-line">
                 {fields.map((field) => {
                   const missing = field.required && field.value.trim() === ''
                   const inputId = `saved-field-${field.id}`
-                  const candidates = field.candidates ?? []
-                  const showCandidates = editing && openFieldId === field.id && candidates.length > 0
+                  const candidates = candidatesForField(field)
                   return (
                     <div
                       key={field.id}
@@ -245,16 +336,8 @@ export function RecordDetail({ row, onBack, onSaved }: Props) {
                               onChange={(event) =>
                                 setDraft((current) => setSnapshotValue(current, field.id, event.target.value))
                               }
-                              onFocus={() => setOpenFieldId(field.id)}
-                              onBlur={() => {
-                                window.setTimeout(() => {
-                                  setOpenFieldId((current) => (current === field.id ? null : current))
-                                }, 0)
-                              }}
                               aria-required={field.required}
                               aria-invalid={missing}
-                              aria-expanded={showCandidates}
-                              aria-controls={showCandidates ? `${inputId}-candidates` : undefined}
                               className={`min-h-11 min-w-0 flex-1 rounded-sm border bg-card px-3 py-2 text-right text-sm text-ink ${
                                 missing ? 'border-danger' : 'border-line'
                               }`}
@@ -274,26 +357,32 @@ export function RecordDetail({ row, onBack, onSaved }: Props) {
                           ) : null}
                         </dd>
                       </div>
-                      {showCandidates ? (
-                        <div id={`${inputId}-candidates`} className="mt-2">
-                          <p className="text-right text-xs text-muted">系統抽出多個候選，選一個或自己填</p>
-                          <div className="mt-1.5 flex flex-wrap justify-end gap-1.5">
+                      {candidates.length > 0 ? (
+                        <div id={`${inputId}-candidates`} className="mt-2 rounded-sm border border-line bg-card px-3 py-2">
+                          <p className="text-xs text-muted">
+                            {editing
+                              ? '系統抽出多個候選，選一個或自己在上方填'
+                              : '系統抽出多個候選'}
+                          </p>
+                          <div className="mt-1.5 flex flex-wrap gap-1.5">
                             {candidates.map((candidate) => {
                               const selected = field.value === candidate
                               return (
                                 <button
                                   key={candidate}
                                   type="button"
-                                  onMouseDown={(event) => event.preventDefault()}
                                   onClick={() => {
+                                    if (!editing) {
+                                      window.alert('請先點擊「編輯」')
+                                      return
+                                    }
                                     setDraft((current) => setSnapshotValue(current, field.id, candidate))
-                                    setOpenFieldId(field.id)
                                   }}
                                   aria-pressed={selected}
                                   className={`min-h-11 rounded-sm border px-3 py-2 text-xs ${
                                     selected
-                                      ? 'border-ink bg-ink text-paper'
-                                      : 'border-line text-ink-soft hover:border-ink'
+                                      ? 'border-accent bg-paper-2 text-accent'
+                                      : 'border-line bg-paper text-ink-soft hover:border-accent hover:text-ink'
                                   }`}
                                 >
                                   {candidate}
@@ -307,6 +396,7 @@ export function RecordDetail({ row, onBack, onSaved }: Props) {
                   )
                 })}
               </dl>
+              ) : null}
             </section>
           )
         })}
@@ -316,7 +406,8 @@ export function RecordDetail({ row, onBack, onSaved }: Props) {
             {filter === 'review' ? '沒有需要特別檢查的欄位。' : '沒有符合條件的欄位。'}
           </p>
         ) : null}
-      </main>
+        </main>
+      </div>
     </div>
   )
 }
@@ -337,11 +428,15 @@ function FilterButton({
       type="button"
       onClick={() => onClick(id)}
       aria-pressed={current === id}
-      className={`min-h-11 shrink-0 rounded-sm px-3 py-2 text-sm ${
-        current === id ? 'bg-ink text-paper' : 'text-ink-soft hover:bg-paper-2'
-      }`}
+      className={navClass(current === id)}
     >
       {label}
     </button>
   )
+}
+
+function navClass(active: boolean) {
+  return `flex min-h-11 w-full shrink-0 items-center justify-between whitespace-nowrap rounded-sm px-3 py-2 text-left text-sm md:px-2 md:py-1.5 ${
+    active ? 'bg-ink text-paper' : 'text-ink-soft hover:bg-paper-2'
+  }`
 }

@@ -21,6 +21,7 @@ alter table public.reviews enable row level security;
 drop policy if exists "anon can insert reviews" on public.reviews;
 drop policy if exists "anon can select reviews" on public.reviews;
 drop policy if exists "anon can update reviews" on public.reviews;
+drop policy if exists "anon can delete reviews" on public.reviews;
 
 create policy "anon can insert reviews"
   on public.reviews
@@ -41,4 +42,10 @@ create policy "anon can update reviews"
   using (true)
   with check (true);
 
-grant select, insert, update on public.reviews to anon, authenticated;
+create policy "anon can delete reviews"
+  on public.reviews
+  for delete
+  to anon, authenticated
+  using (true);
+
+grant select, insert, update, delete on public.reviews to anon, authenticated;

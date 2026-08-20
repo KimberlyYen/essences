@@ -117,8 +117,9 @@ describe('解析過程的狀態累積', () => {
       code: 'UPSTREAM_TIMEOUT',
     })
 
-    expect(state.fields).toHaveLength(1)
-    expect(state.fields[0].label).toBe('品名')
+    expect(state.fields.map((field) => field.label)).toEqual(['品名', '有效日期', '廠商名稱'])
+    expect(state.fields[0].value).toBe('火腿')
+    expect(state.fields[1].value).toBe('')
     expect(state.error?.code).toBe('UPSTREAM_TIMEOUT')
     expect(state.done).toBe(false)
     expect(canSubmit(state.fields)).toBe(false)

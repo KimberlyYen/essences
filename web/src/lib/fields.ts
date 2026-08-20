@@ -2,7 +2,7 @@
  * 欄位規則集中在這裡，不放進 React。
  * 送出能不能按、要不要標「需檢查」、怎麼分組，面試被問「拿掉會怎樣」就是這檔。
  */
-import { GROUPS, type ApiField, type FieldStatus, type Group, type ReviewField } from '../types'
+import { GROUPS, type ApiField, type FieldStatus, type FilterId, type Group, type ReviewField } from '../types'
 
 /**
  * 後端低把握大約 0.31–0.68，高把握大約 0.82–0.99。
@@ -16,6 +16,14 @@ export const REQUIRED_LABELS = ['品名', '有效日期', '廠商名稱'] as con
 export function isGroup(value: string): value is Group {
   // 後端 group 若出乎預期，groupFields 會退回「基本資料」
   return (GROUPS as readonly string[]).includes(value)
+}
+
+/**
+ * 看「全部」又沒鎖群組時，一次攤開會變成無限長捲軸。
+ * 這種組合改成點群組標題才展開；需檢查／必填／單一群組本來就短，不用收。
+ */
+export function shouldCollapseGroups(filter: FilterId, activeGroup: Group | 'all'): boolean {
+  return filter === 'all' && activeGroup === 'all'
 }
 
 /**
@@ -52,6 +60,27 @@ export function needsReview(field: ReviewField): boolean {
 export function absentRequiredLabels(fields: ReviewField[]): string[] {
   const labels = new Set(fields.map((field) => field.label))
   return REQUIRED_LABELS.filter((label) => !labels.has(label))
+}
+
+function emptyRequiredField(label: (typeof REQUIRED_LABELS)[number]): ReviewField {
+  return toReviewField({
+    id: `missing-${label}`,
+    label,
+    group: label === '廠商名稱' ? '廠商資訊' : '基本資料',
+    value: '',
+    confidence: null,
+    required: true,
+    page: 1,
+  })
+}
+
+/**
+ * 串流停了（停止、失敗、抽完）時，把還沒出現的法規必填補成空白列。
+ * 使用者才能自己填完再送；解析途中不要呼叫，否則真的抽出來會重複。
+ */
+export function ensureRequiredFields(fields: ReviewField[]): ReviewField[] {
+  const extra = absentRequiredLabels(fields).map(emptyRequiredField)
+  return extra.length === 0 ? fields : [...fields, ...extra]
 }
 
 /**

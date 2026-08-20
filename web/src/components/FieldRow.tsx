@@ -102,10 +102,10 @@ export const FieldRow = memo(function FieldRow({ field, onChange, onConfirm, onP
                   aria-pressed={field.value === candidate}
                   className={`min-h-11 rounded-sm border px-3 py-2 text-xs ${
                     selected
-                      ? 'border-ink bg-ink text-paper'
+                      ? 'border-accent bg-paper-2 text-accent'
                       : field.value === candidate
-                        ? 'border-warn text-ink'
-                        : 'border-line text-ink-soft hover:border-ink'
+                        ? 'border-accent/40 bg-card text-ink'
+                        : 'border-line bg-card text-ink-soft hover:border-accent hover:text-ink'
                   }`}
                 >
                   {candidate}

@@ -3,7 +3,7 @@
  * 純函式，所以 sse.test.ts 不用開瀏覽器就能測。
  */
 import type { ExtractEvent, ExtractState } from '../types'
-import { toReviewField } from './fields'
+import { ensureRequiredFields, toReviewField } from './fields'
 
 export const initialExtractState: ExtractState = {
   stage: '等待開始',
@@ -141,10 +141,11 @@ export function reduceExtract(state: ExtractState, event: ExtractEvent): Extract
         cancelled: false,
       }
     case 'error':
-      // 不把 fields 清掉
+      // 不把 fields 清掉；缺席的必填補空白列，才能讓人填完再送
       return {
         ...state,
         error: { message: event.message, code: event.code },
+        fields: ensureRequiredFields(state.fields),
       }
     case 'done':
       // done=true 之後 hook 才允許送出
@@ -154,6 +155,7 @@ export function reduceExtract(state: ExtractState, event: ExtractEvent): Extract
         progress: event.progress,
         done: true,
         cancelled: false,
+        fields: ensureRequiredFields(state.fields),
       }
   }
 }

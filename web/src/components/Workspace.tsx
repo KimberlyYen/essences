@@ -4,10 +4,10 @@
  * 左邊篩選，右邊依群組列出欄位——不用表格分頁，才不會把同組拆開。
  */
 import { useLayoutEffect, useState } from 'react'
-import { GROUPS, type FilterId } from '../types'
+import { GROUPS, type FilterId, type Group } from '../types'
 import { FieldRow } from './FieldRow'
 import type { ReviewSession } from '../hooks/useReviewSession'
-import { groupFields, isGroup, needsReview } from '../lib/fields'
+import { groupFields, isGroup, needsReview, shouldCollapseGroups } from '../lib/fields'
 
 type Props = {
   session: ReviewSession
@@ -47,12 +47,14 @@ export function Workspace({ session }: Props) {
     : `${extract.progress}%`
 
   const [jumpId, setJumpId] = useState<string | null>(null)
+  const [openGroup, setOpenGroup] = useState<Group | null>(null)
+  const accordion = shouldCollapseGroups(filter, activeGroup)
 
-  // 紅條點哪個欄位名，就跳到那個輸入框；等篩選切回去、列畫出來再捲
+  // 紅條點哪個欄位名，就跳到那個輸入框；切到必填＋該組，不要為了跳轉把 120 列全攤開
   function jumpToMissingField(label: string) {
     const field = extract.fields.find((item) => item.label === label)
     if (!field) return
-    setFilter('all')
+    setFilter('required')
     setActiveGroup(isGroup(field.group) ? field.group : 'all')
     setJumpId(field.id)
   }
@@ -205,7 +207,7 @@ export function Workspace({ session }: Props) {
         {extract.cancelled && !extract.done ? (
           <div className="border-t border-line bg-paper-2">
             <p className="mx-auto max-w-5xl px-4 py-2 text-sm text-ink-soft">
-              已停止解析。目前有 {extract.fields.length} 個欄位可繼續編輯，或重新上傳。
+              已停止解析。已抽出的欄位可繼續編輯；還沒出現的法規必填已補成空白列，填完即可送出，或重新上傳。
             </p>
           </div>
         ) : null}
@@ -287,28 +289,54 @@ export function Workspace({ session }: Props) {
             <p className="text-sm text-muted">尚無欄位。請重新上傳或重試解析。</p>
           ) : null}
 
+          {accordion ? (
+            <p className="mb-6 text-sm text-ink-soft">
+              欄位數量隨文件變化，全部攤開會變成一條很長的捲軸。點群組標題展開該組，或改用左側「需檢查」。
+            </p>
+          ) : null}
+
           {GROUPS.map((group) => {
             const fields = visibleGrouped.get(group) ?? []
             if (fields.length === 0) return null
+            const expanded = !accordion || openGroup === group
             return (
               // 組名 sticky，上百欄往下捲時還知道自己在哪一組
               <section key={group} id={`group-${group}`} className="mb-10">
                 <h2 className="mb-2 bg-paper/95 px-1 py-2 font-serif text-xl text-ink md:sticky md:top-[8.5rem] md:z-10 md:-mx-1 md:backdrop-blur">
-                  {group}
-                  <span className="ml-2 font-sans text-sm text-muted">{fields.length}</span>
+                  {accordion ? (
+                    <button
+                      type="button"
+                      onClick={() => setOpenGroup(openGroup === group ? null : group)}
+                      aria-expanded={expanded}
+                      className="flex min-h-11 w-full items-center justify-between gap-3 text-left"
+                    >
+                      <span>
+                        {group}
+                        <span className="ml-2 font-sans text-sm text-muted">{fields.length}</span>
+                      </span>
+                      <span className="font-sans text-sm font-normal text-accent">{expanded ? '收合' : '展開'}</span>
+                    </button>
+                  ) : (
+                    <>
+                      {group}
+                      <span className="ml-2 font-sans text-sm text-muted">{fields.length}</span>
+                    </>
+                  )}
                 </h2>
-                <div className="divide-y divide-line">
-                  {fields.map((field) => (
-                    <FieldRow
-                      key={field.id}
-                      field={field}
-                      onChange={setFieldValue}
-                      onConfirm={confirmField}
-                      onPick={chooseCandidate}
-                      onReset={revertField}
-                    />
-                  ))}
-                </div>
+                {expanded ? (
+                  <div className="divide-y divide-line">
+                    {fields.map((field) => (
+                      <FieldRow
+                        key={field.id}
+                        field={field}
+                        onChange={setFieldValue}
+                        onConfirm={confirmField}
+                        onPick={chooseCandidate}
+                        onReset={revertField}
+                      />
+                    ))}
+                  </div>
+                ) : null}
               </section>
             )
           })}

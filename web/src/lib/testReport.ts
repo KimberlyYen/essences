@@ -51,6 +51,12 @@ export const TEST_GROUPS: TestGroupReport[] = [
         breaksIf: '有人只檢查「已出現的必填有沒有值」，不管另外兩個還沒到。',
       },
       {
+        id: 'pad-absent-required',
+        name: '串流停了之後，缺席的必填要補成空白列',
+        guards: '中途停止時還沒抽到的必填要能自己填，填完才能把已抽出的存出去。',
+        breaksIf: '有人拿掉 ensureRequiredFields，停止後畫面上又沒有必填格子。',
+      },
+      {
         id: 'whitespace',
         name: '必填只填空白字元仍視為缺漏',
         guards: '空白不等於有填。',
@@ -87,6 +93,12 @@ export const TEST_GROUPS: TestGroupReport[] = [
         name: '交錯到達的欄位會依群組歸位，組內維持到達順序',
         guards: '後端照文件順序回，前端要自己把同組收在一起。',
         breaksIf: '有人改成分頁表格、或分組時打亂組內順序。',
+      },
+      {
+        id: 'collapse-all-groups',
+        name: '看全部又沒鎖群組時才收合',
+        guards: '欄位數不固定時，不能把全部列一次攤開變成無限捲軸。',
+        breaksIf: '有人讓 全部 + 所有群組 直接渲染每一列。',
       },
     ],
   },
@@ -185,8 +197,8 @@ export const TEST_GROUPS: TestGroupReport[] = [
       {
         id: 'keep-on-error',
         name: '中途收到 error 時，已經抽出的欄位要留下來',
-        guards: '解析掛掉不能把畫面清空。',
-        breaksIf: '有人在 error 時 reset 成 initialExtractState。',
+        guards: '解析掛掉不能把畫面清空；缺席的必填要補空白列，已抽出的值要留著。',
+        breaksIf: '有人在 error 時 reset 成 initialExtractState，或把已抽出的欄位蓋掉。',
       },
       {
         id: 'append',
