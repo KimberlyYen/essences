@@ -1,8 +1,16 @@
 /**
- * 紀錄詳情：有 jsonb 快照就用快照；舊資料只攤三個必填。
+ * 紀錄詳情：有 jsonb 快照就用快照；舊資料只攤三個必填。編輯後同步必填欄。
  */
 import { describe, expect, it } from 'vitest'
-import { detailFieldsFromSaved, parseFieldSnapshots, type SavedReview } from './reviews'
+import {
+  canSaveSnapshots,
+  detailFieldsFromSaved,
+  parseFieldSnapshots,
+  payloadForUpdate,
+  setSnapshotValue,
+  snapshotsHaveChanges,
+  type SavedReview,
+} from './reviews'
 
 const base: SavedReview = {
   id: '1',
@@ -45,5 +53,25 @@ describe('已儲存紀錄的詳細欄位', () => {
     expect(parseFieldSnapshots(null)).toEqual([])
     expect(parseFieldSnapshots([{ label: '鈉', id: 'f1', group: '營養標示', value: '1', required: false, status: 'accepted', page: 1 }])).toHaveLength(1)
     expect(parseFieldSnapshots(['nope'])).toEqual([])
+  })
+})
+
+describe('已儲存紀錄的編輯', () => {
+  it('改品名時，獨立欄位跟快照一起更新，並標成 edited', () => {
+    const original = detailFieldsFromSaved(base)
+    const draft = setSnapshotValue(original, 'product_name', '煙燻火腿')
+    const payload = payloadForUpdate(original, draft)
+    expect(payload.product_name).toBe('煙燻火腿')
+    expect(payload.expiry_date).toBe('2027/01/08')
+    expect(payload.fields.find((field) => field.id === 'product_name')?.status).toBe('edited')
+    expect(payload.fields.find((field) => field.id === 'expiry_date')?.status).toBe('accepted')
+  })
+
+  it('必填被清空就不能存；沒改過也不算有變更', () => {
+    const original = detailFieldsFromSaved(base)
+    expect(canSaveSnapshots(original)).toBe(true)
+    expect(snapshotsHaveChanges(original, original)).toBe(false)
+    expect(canSaveSnapshots(setSnapshotValue(original, 'product_name', '  '))).toBe(false)
+    expect(snapshotsHaveChanges(original, setSnapshotValue(original, 'vendor_name', '別家'))).toBe(true)
   })
 })

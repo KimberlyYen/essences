@@ -1,8 +1,15 @@
 /**
- * 審核結果寫入 / 讀出 Supabase 的 reviews 表。
+ * 審核結果寫入 / 讀出 / 更新 Supabase 的 reviews 表。
  * 三個法規必填各一欄，全部欄位放 fields jsonb。表要先跑 supabase/reviews.sql。
  */
-import { canSubmit, payloadForSubmit, requiredReviewRow, type FieldSnapshot, type RequiredReviewRow } from './fields'
+import {
+  canSubmit,
+  payloadForSubmit,
+  REQUIRED_LABELS,
+  requiredReviewRow,
+  type FieldSnapshot,
+  type RequiredReviewRow,
+} from './fields'
 import { createClient } from './supabase/client'
 import type { FieldStatus, ReviewField } from '../types'
 
@@ -17,7 +24,7 @@ function saveErrorMessage(message: string): string {
     return '資料表 reviews 尚未建立，或還沒有 fields 欄位。請到 Supabase SQL Editor 再執行一次 supabase/reviews.sql。'
   }
   if (message.toLowerCase().includes('row-level security') || message.includes('RLS')) {
-    return '存取被拒絕。請確認 reviews 資料表已開放 anon 的 insert / select 政策。'
+    return '存取被拒絕。請到 Supabase SQL Editor 再執行一次 supabase/reviews.sql，確認已開放 anon 的 insert / select / update。'
   }
   return `無法連線 Supabase：${message}`
 }
@@ -89,6 +96,58 @@ export function detailFieldsFromSaved(row: SavedReview): FieldSnapshot[] {
   ]
 }
 
+export function setSnapshotValue(fields: FieldSnapshot[], id: string, value: string): FieldSnapshot[] {
+  return fields.map((field) => (field.id === id ? { ...field, value } : field))
+}
+
+/** 有改過的列標成 edited；三個法規必填同步回獨立欄位。 */
+export function payloadForUpdate(original: FieldSnapshot[], draft: FieldSnapshot[]) {
+  const fields = draft.map((field) => {
+    const before = original.find((item) => item.id === field.id)
+    if (before && before.value !== field.value) {
+      return { ...field, status: 'edited' as const }
+    }
+    return field
+  })
+  const valueOf = (label: (typeof REQUIRED_LABELS)[number]) =>
+    fields.find((field) => field.label === label)?.value.trim() ?? ''
+
+  return {
+    product_name: valueOf('品名'),
+    expiry_date: valueOf('有效日期'),
+    vendor_name: valueOf('廠商名稱'),
+    fields,
+  }
+}
+
+export function canSaveSnapshots(fields: FieldSnapshot[]): boolean {
+  return REQUIRED_LABELS.every((label) => {
+    const field = fields.find((item) => item.label === label)
+    return Boolean(field && field.value.trim() !== '')
+  })
+}
+
+export function snapshotsHaveChanges(original: FieldSnapshot[], draft: FieldSnapshot[]): boolean {
+  if (original.length !== draft.length) return true
+  return draft.some((field) => original.find((item) => item.id === field.id)?.value !== field.value)
+}
+
+function mapSavedReview(row: Record<string, unknown>): SavedReview {
+  return {
+    id: asString(row.id),
+    filename: asString(row.filename),
+    document_id: typeof row.document_id === 'string' ? row.document_id : null,
+    product_name: asString(row.product_name),
+    expiry_date: asString(row.expiry_date),
+    vendor_name: asString(row.vendor_name),
+    created_at: asString(row.created_at),
+    fields: parseFieldSnapshots(row.fields),
+  }
+}
+
+const SAVED_REVIEW_COLUMNS =
+  'id, filename, document_id, product_name, expiry_date, vendor_name, fields, created_at'
+
 export async function saveRequiredReview(
   filename: string,
   documentId: string | null,
@@ -112,25 +171,37 @@ export async function saveRequiredReview(
   return row
 }
 
+export async function updateSavedReview(id: string, original: FieldSnapshot[], draft: FieldSnapshot[]): Promise<SavedReview> {
+  if (!canSaveSnapshots(draft)) {
+    throw new Error('法規必填欄位未填寫完整，無法儲存。')
+  }
+
+  const payload = payloadForUpdate(original, draft)
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('reviews')
+    .update(payload)
+    .eq('id', id)
+    .select(SAVED_REVIEW_COLUMNS)
+    .single()
+
+  if (error) {
+    throw new Error(saveErrorMessage(error.message))
+  }
+
+  return mapSavedReview((data ?? {}) as Record<string, unknown>)
+}
+
 export async function listRequiredReviews(): Promise<SavedReview[]> {
   const supabase = createClient()
   const { data, error } = await supabase
     .from('reviews')
-    .select('id, filename, document_id, product_name, expiry_date, vendor_name, fields, created_at')
+    .select(SAVED_REVIEW_COLUMNS)
     .order('created_at', { ascending: false })
 
   if (error) {
     throw new Error(saveErrorMessage(error.message))
   }
 
-  return (data ?? []).map((row) => ({
-    id: asString(row.id),
-    filename: asString(row.filename),
-    document_id: typeof row.document_id === 'string' ? row.document_id : null,
-    product_name: asString(row.product_name),
-    expiry_date: asString(row.expiry_date),
-    vendor_name: asString(row.vendor_name),
-    created_at: asString(row.created_at),
-    fields: parseFieldSnapshots(row.fields),
-  }))
+  return (data ?? []).map((row) => mapSavedReview(row as Record<string, unknown>))
 }

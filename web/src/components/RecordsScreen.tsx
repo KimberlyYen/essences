@@ -41,7 +41,15 @@ export function RecordsScreen({ onBack }: Props) {
 
   const selected = rows.find((row) => row.id === selectedId) ?? null
   if (selected) {
-    return <RecordDetail row={selected} onBack={() => setSelectedId(null)} />
+    return (
+      <RecordDetail
+        row={selected}
+        onBack={() => setSelectedId(null)}
+        onSaved={(updated) => {
+          setRows((current) => current.map((item) => (item.id === updated.id ? updated : item)))
+        }}
+      />
+    )
   }
 
   return (
@@ -51,7 +59,7 @@ export function RecordsScreen({ onBack }: Props) {
           <p className="font-serif text-sm tracking-wide text-accent">essences</p>
           <h1 className="mt-2 font-serif text-3xl text-ink sm:text-4xl">已儲存紀錄</h1>
           <p className="mt-3 max-w-xl text-sm leading-6 text-ink-soft">
-            清單是法規必填摘要。點進去看該次送出的全部欄位。新的在最上面。
+            清單是法規必填摘要。點進去可查看、編輯後再儲存。新的在最上面。
           </p>
         </div>
         <div className="flex gap-2">
