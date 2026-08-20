@@ -3,13 +3,7 @@
  */
 import { useEffect, useState } from 'react'
 import { GROUPS, type ReviewField } from '../types'
-import {
-  fromDateInputValue,
-  groupFields,
-  isDateFieldLabel,
-  toDateInputValue,
-  type FieldSnapshot,
-} from '../lib/fields'
+import { groupFields, type FieldSnapshot } from '../lib/fields'
 import {
   canSaveSnapshots,
   detailFieldsFromSaved,
@@ -101,7 +95,7 @@ export function RecordDetail({ row, onBack, onSaved }: Props) {
   return (
     <div className="min-h-dvh pb-[max(2.5rem,env(safe-area-inset-bottom))]">
       <header className="sticky top-0 z-20 border-b border-line bg-paper/95 backdrop-blur">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-3 px-4 py-3">
+        <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-3">
           <button
             type="button"
             onClick={onBack}
@@ -176,98 +170,63 @@ export function RecordDetail({ row, onBack, onSaved }: Props) {
                 {group}
                 <span className="ml-2 font-sans text-sm text-muted">{fields.length}</span>
               </h2>
-              {editing ? (
-                <div className="divide-y divide-line border-t border-line">
-                  {fields.map((field) => (
-                    <EditField
-                      key={field.id}
-                      field={{
-                        id: field.id,
-                        label: field.label,
-                        group: field.group,
-                        value: field.value,
-                        required: field.required,
-                        status: field.status,
-                        page: field.page,
-                      }}
-                      onChange={(id, value) => setDraft((current) => setSnapshotValue(current, id, value))}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <dl className="divide-y divide-line border-t border-line">
-                  {fields.map((field) => (
-                    <div key={field.id} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3">
-                      <dt className="text-sm font-medium text-ink">
-                        {field.label}
-                        {field.required ? (
-                          <span className="ml-1 text-danger" aria-hidden="true">
-                            *
-                          </span>
-                        ) : null}
+              <dl className="divide-y divide-line border-t border-line">
+                {fields.map((field) => {
+                  const missing = field.required && field.value.trim() === ''
+                  const inputId = `saved-field-${field.id}`
+                  return (
+                    <div key={field.id} className="flex items-baseline justify-between gap-x-4 py-3">
+                      <dt className="shrink-0 text-sm font-medium text-ink">
+                        {editing ? (
+                          <label htmlFor={inputId}>
+                            {field.label}
+                            {field.required ? (
+                              <>
+                                <span className="ml-1 text-danger" aria-hidden="true">
+                                  *
+                                </span>
+                                <span className="sr-only">（必填）</span>
+                              </>
+                            ) : null}
+                          </label>
+                        ) : (
+                          <>
+                            {field.label}
+                            {field.required ? (
+                              <span className="ml-1 text-danger" aria-hidden="true">
+                                *
+                              </span>
+                            ) : null}
+                          </>
+                        )}
                       </dt>
-                      <dd className="max-w-full text-right text-sm text-ink-soft">
-                        <span className="text-ink">{field.value.trim() === '' ? '—' : field.value}</span>
+                      <dd className="flex min-w-0 flex-1 items-baseline justify-end gap-2 text-sm text-ink-soft">
+                        {editing ? (
+                          <input
+                            id={inputId}
+                            value={field.value}
+                            onChange={(event) =>
+                              setDraft((current) => setSnapshotValue(current, field.id, event.target.value))
+                            }
+                            aria-required={field.required}
+                            aria-invalid={missing}
+                            className="min-w-0 flex-1 bg-transparent p-0 text-right text-sm text-ink outline-none"
+                          />
+                        ) : (
+                          <span className="text-ink">{field.value.trim() === '' ? '—' : field.value}</span>
+                        )}
                         {fromSnapshot ? (
-                          <span className="ml-2 text-xs text-muted">{statusLabel(field.status)}</span>
+                          <span className="shrink-0 text-xs text-muted">{statusLabel(field.status)}</span>
                         ) : null}
                       </dd>
                     </div>
-                  ))}
-                </dl>
-              )}
+                  )
+                })}
+              </dl>
             </section>
           )
         })}
       </main>
-    </div>
-  )
-}
-
-function EditField({
-  field,
-  onChange,
-}: {
-  field: FieldSnapshot
-  onChange: (id: string, value: string) => void
-}) {
-  const missing = field.required && field.value.trim() === ''
-  const inputId = `saved-field-${field.id}`
-  const dateField = isDateFieldLabel(field.label)
-
-  return (
-    <div className="py-3">
-      <label htmlFor={inputId} className="text-sm font-medium text-ink">
-        {field.label}
-        {field.required ? (
-          <>
-            <span className="ml-1 text-danger" aria-hidden="true">
-              *
-            </span>
-            <span className="sr-only">（必填）</span>
-          </>
-        ) : null}
-      </label>
-      {dateField ? (
-        <input
-          id={inputId}
-          type="date"
-          value={toDateInputValue(field.value)}
-          onChange={(event) => onChange(field.id, fromDateInputValue(event.target.value))}
-          aria-required={field.required}
-          aria-invalid={missing}
-          className="mt-1.5 w-full min-h-11 rounded-sm border border-line bg-card px-3 py-2 text-sm text-ink"
-        />
-      ) : (
-        <input
-          id={inputId}
-          value={field.value}
-          onChange={(event) => onChange(field.id, event.target.value)}
-          aria-required={field.required}
-          aria-invalid={missing}
-          className="mt-1.5 w-full min-h-11 rounded-sm border border-line bg-card px-3 py-2 text-sm text-ink"
-        />
-      )}
     </div>
   )
 }
