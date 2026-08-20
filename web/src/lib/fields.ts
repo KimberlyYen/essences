@@ -156,6 +156,7 @@ export type FieldSnapshot = {
   required: boolean
   status: FieldStatus
   page: number
+  candidates?: string[]
 }
 
 export function payloadForSubmit(fields: ReviewField[]): FieldSnapshot[] {
@@ -167,6 +168,7 @@ export function payloadForSubmit(fields: ReviewField[]): FieldSnapshot[] {
     required: field.required,
     status: field.status,
     page: field.page,
+    ...(field.candidates && field.candidates.length > 0 ? { candidates: field.candidates } : {}),
   }))
 }
 

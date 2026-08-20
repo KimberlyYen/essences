@@ -43,6 +43,7 @@ function asReviewFields(snapshots: FieldSnapshot[]): ReviewField[] {
     page: item.page,
     originalValue: item.value,
     status: item.status,
+    candidates: item.candidates,
   }))
 }
 
@@ -53,12 +54,14 @@ export function RecordDetail({ row, onBack, onSaved }: Props) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState<FilterId>('all')
+  const [openFieldId, setOpenFieldId] = useState<string | null>(null)
 
   useEffect(() => {
     setDraft(detailFieldsFromSaved(row))
     setEditing(false)
     setError(null)
     setFilter('all')
+    setOpenFieldId(null)
   }, [row])
 
   const snapshots = editing ? draft : original
@@ -80,12 +83,14 @@ export function RecordDetail({ row, onBack, onSaved }: Props) {
     setDraft(detailFieldsFromSaved(row))
     setError(null)
     setEditing(true)
+    setOpenFieldId(null)
   }
 
   function cancelEdit() {
     setDraft(detailFieldsFromSaved(row))
     setError(null)
     setEditing(false)
+    setOpenFieldId(null)
   }
 
   async function save() {
@@ -95,6 +100,7 @@ export function RecordDetail({ row, onBack, onSaved }: Props) {
     try {
       onSaved(await updateSavedReview(row.id, original, draft))
       setEditing(false)
+      setOpenFieldId(null)
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : '儲存失敗')
     } finally {
@@ -193,10 +199,12 @@ export function RecordDetail({ row, onBack, onSaved }: Props) {
                 {fields.map((field) => {
                   const missing = field.required && field.value.trim() === ''
                   const inputId = `saved-field-${field.id}`
+                  const candidates = field.candidates ?? []
+                  const showCandidates = editing && openFieldId === field.id && candidates.length > 0
                   return (
                     <div
                       key={field.id}
-                      className={`flex items-baseline justify-between gap-x-4 border-l-2 py-3 pl-3 ${
+                      className={`border-l-2 py-3 pl-3 ${
                         field.required && field.value.trim() === ''
                           ? 'border-danger bg-danger-bg/60'
                           : needsReview(field)
@@ -204,55 +212,97 @@ export function RecordDetail({ row, onBack, onSaved }: Props) {
                             : 'border-transparent'
                       }`}
                     >
-                      <dt className="shrink-0 text-sm font-medium text-ink">
-                        {editing ? (
-                          <label htmlFor={inputId}>
-                            {field.label}
-                            {field.required ? (
-                              <>
+                      <div className="flex items-center justify-between gap-x-4">
+                        <dt className="shrink-0 text-sm font-medium text-ink">
+                          {editing ? (
+                            <label htmlFor={inputId}>
+                              {field.label}
+                              {field.required ? (
+                                <>
+                                  <span className="ml-1 text-danger" aria-hidden="true">
+                                    *
+                                  </span>
+                                  <span className="sr-only">（必填）</span>
+                                </>
+                              ) : null}
+                            </label>
+                          ) : (
+                            <>
+                              {field.label}
+                              {field.required ? (
                                 <span className="ml-1 text-danger" aria-hidden="true">
                                   *
                                 </span>
-                                <span className="sr-only">（必填）</span>
-                              </>
-                            ) : null}
-                          </label>
-                        ) : (
-                          <>
-                            {field.label}
-                            {field.required ? (
-                              <span className="ml-1 text-danger" aria-hidden="true">
-                                *
-                              </span>
-                            ) : null}
-                          </>
-                        )}
-                      </dt>
-                      <dd className="flex min-w-0 flex-1 items-baseline justify-end gap-2 text-sm text-ink-soft">
-                        {editing ? (
-                          <input
-                            id={inputId}
-                            value={field.value}
-                            onChange={(event) =>
-                              setDraft((current) => setSnapshotValue(current, field.id, event.target.value))
-                            }
-                            aria-required={field.required}
-                            aria-invalid={missing}
-                            className="min-w-0 flex-1 bg-transparent p-0 text-right text-sm text-ink outline-none"
-                          />
-                        ) : (
-                          <span className="text-ink">{field.value.trim() === '' ? '—' : field.value}</span>
-                        )}
-                        {fromSnapshot ? (
-                          <span
-                            className={`shrink-0 text-xs ${
-                              missing ? 'text-danger' : field.status === 'pending' ? 'text-warn' : 'text-muted'
-                            }`}
-                          >
-                            {missing ? '未填寫' : statusLabel(field.status)}
-                          </span>
-                        ) : null}
-                      </dd>
+                              ) : null}
+                            </>
+                          )}
+                        </dt>
+                        <dd className="flex min-w-0 flex-1 items-center justify-end gap-2 text-sm text-ink-soft">
+                          {editing ? (
+                            <input
+                              id={inputId}
+                              value={field.value}
+                              onChange={(event) =>
+                                setDraft((current) => setSnapshotValue(current, field.id, event.target.value))
+                              }
+                              onFocus={() => setOpenFieldId(field.id)}
+                              onBlur={() => {
+                                window.setTimeout(() => {
+                                  setOpenFieldId((current) => (current === field.id ? null : current))
+                                }, 0)
+                              }}
+                              aria-required={field.required}
+                              aria-invalid={missing}
+                              aria-expanded={showCandidates}
+                              aria-controls={showCandidates ? `${inputId}-candidates` : undefined}
+                              className={`min-h-11 min-w-0 flex-1 rounded-sm border bg-card px-3 py-2 text-right text-sm text-ink ${
+                                missing ? 'border-danger' : 'border-line'
+                              }`}
+                            />
+                          ) : (
+                            <span className="text-ink">{field.value.trim() === '' ? '—' : field.value}</span>
+                          )}
+                          {fromSnapshot ? (
+                            <span
+                              className={`shrink-0 text-xs ${
+                                missing ? 'text-danger' : field.status === 'pending' ? 'text-warn' : 'text-muted'
+                              }`}
+                            >
+                              {missing ? '未填寫' : statusLabel(field.status)}
+                              {candidates.length > 0 ? ' · 多候選' : ''}
+                            </span>
+                          ) : null}
+                        </dd>
+                      </div>
+                      {showCandidates ? (
+                        <div id={`${inputId}-candidates`} className="mt-2">
+                          <p className="text-right text-xs text-muted">系統抽出多個候選，選一個或自己填</p>
+                          <div className="mt-1.5 flex flex-wrap justify-end gap-1.5">
+                            {candidates.map((candidate) => {
+                              const selected = field.value === candidate
+                              return (
+                                <button
+                                  key={candidate}
+                                  type="button"
+                                  onMouseDown={(event) => event.preventDefault()}
+                                  onClick={() => {
+                                    setDraft((current) => setSnapshotValue(current, field.id, candidate))
+                                    setOpenFieldId(field.id)
+                                  }}
+                                  aria-pressed={selected}
+                                  className={`min-h-11 rounded-sm border px-3 py-2 text-xs ${
+                                    selected
+                                      ? 'border-ink bg-ink text-paper'
+                                      : 'border-line text-ink-soft hover:border-ink'
+                                  }`}
+                                >
+                                  {candidate}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      ) : null}
                     </div>
                   )
                 })}

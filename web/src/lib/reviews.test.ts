@@ -53,6 +53,20 @@ describe('已儲存紀錄的詳細欄位', () => {
     expect(parseFieldSnapshots(null)).toEqual([])
     expect(parseFieldSnapshots([{ label: '鈉', id: 'f1', group: '營養標示', value: '1', required: false, status: 'accepted', page: 1 }])).toHaveLength(1)
     expect(parseFieldSnapshots(['nope'])).toEqual([])
+    expect(
+      parseFieldSnapshots([
+        {
+          id: 'f2',
+          label: '有效日期',
+          group: '基本資料',
+          value: '2026/03/15',
+          required: true,
+          status: 'pending',
+          page: 1,
+          candidates: ['2026/03/15', '2026/05/30'],
+        },
+      ])[0]?.candidates,
+    ).toEqual(['2026/03/15', '2026/05/30'])
   })
 })
 

@@ -10,6 +10,7 @@ import {
   groupFields,
   isMissingRequired,
   needsReview,
+  payloadForSubmit,
   pickCandidate,
   requiredReviewRow,
   resetField,
@@ -266,5 +267,20 @@ describe('日期選單與儲存格式', () => {
     expect(fromDateInputValue('2027-01-08')).toBe('2027/01/08')
     expect(toDateInputValue('')).toBe('')
     expect(fromDateInputValue('')).toBe('')
+  })
+})
+
+describe('送出快照', () => {
+  it('多候選欄位要把候選一併寫進快照，詳情才能再挑', () => {
+    const snapshot = payloadForSubmit([
+      toReviewField(
+        apiField({
+          id: 'b',
+          label: '有效日期',
+          candidates: ['2026/03/15', '2026/05/30'],
+        }),
+      ),
+    ])[0]
+    expect(snapshot.candidates).toEqual(['2026/03/15', '2026/05/30'])
   })
 })

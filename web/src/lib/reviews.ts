@@ -39,6 +39,12 @@ function asStatus(value: unknown): FieldStatus {
   return STATUSES.includes(value as FieldStatus) ? (value as FieldStatus) : 'accepted'
 }
 
+function asCandidates(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined
+  const candidates = value.filter((item): item is string => typeof item === 'string' && item.trim() !== '')
+  return candidates.length > 0 ? candidates : undefined
+}
+
 /** jsonb / 舊資料都收成快照；壞掉的列直接跳過。 */
 export function parseFieldSnapshots(value: unknown): FieldSnapshot[] {
   if (!Array.isArray(value)) return []
@@ -54,6 +60,7 @@ export function parseFieldSnapshots(value: unknown): FieldSnapshot[] {
       required: Boolean(row.required),
       status: asStatus(row.status),
       page: typeof row.page === 'number' ? row.page : 1,
+      candidates: asCandidates(row.candidates),
     })
   }
   return snapshots
