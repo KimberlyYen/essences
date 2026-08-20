@@ -3,6 +3,7 @@
  * sticky header 永遠看得到「能不能送、缺哪個必填、解析到哪」。
  * 左邊篩選，右邊依群組列出欄位——不用表格分頁，才不會把同組拆開。
  */
+import { useLayoutEffect, useState } from 'react'
 import { GROUPS, type FilterId } from '../types'
 import { FieldRow } from './FieldRow'
 import type { ReviewSession } from '../hooks/useReviewSession'
@@ -45,22 +46,30 @@ export function Workspace({ session }: Props) {
     ? `${extract.fields.length}/${extract.total}`
     : `${extract.progress}%`
 
-  // 紅條點欄位名：先解除篩選，再捲到輸入框並 focus
+  const [jumpId, setJumpId] = useState<string | null>(null)
+
+  // 紅條點哪個欄位名，就跳到那個輸入框；等篩選切回去、列畫出來再捲
   function jumpToMissingField(label: string) {
     const field = extract.fields.find((item) => item.label === label)
     if (!field) return
     setFilter('all')
     setActiveGroup(isGroup(field.group) ? field.group : 'all')
-    const inputId = `field-${field.id}`
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        const input = document.getElementById(inputId)
-        if (!input) return
-        input.scrollIntoView({ block: 'center', behavior: 'smooth' })
-        input.focus()
-      })
-    })
+    setJumpId(field.id)
   }
+
+  useLayoutEffect(() => {
+    if (!jumpId) return
+    const block = document.getElementById(`field-block-${jumpId}`)
+    const input = document.getElementById(`field-${jumpId}`)
+    const target = block ?? input
+    if (!target) return
+    block?.classList.remove('field-row-jump')
+    void block?.offsetWidth
+    block?.classList.add('field-row-jump')
+    target.scrollIntoView({ block: 'start', behavior: 'smooth' })
+    input?.focus({ preventScroll: true })
+    setJumpId(null)
+  }, [jumpId, filter, activeGroup])
 
   return (
     <div className="min-h-dvh pb-[max(1.5rem,env(safe-area-inset-bottom))]" aria-busy={extracting}>
@@ -148,7 +157,7 @@ export function Workspace({ session }: Props) {
           </div>
         ) : null}
 
-        {/* 第一眼該看這裡：哪幾個法規必填還是空的 */}
+        {/* 第一眼該看這裡：哪幾個法規必填還是空的。點欄位名會跳到該列 */}
         {missing.length > 0 ? (
           <div className="border-t border-danger/20 bg-danger-bg" role="alert" id="missing-required">
             <p className="mx-auto max-w-5xl px-4 py-2 text-sm text-danger">
@@ -162,7 +171,7 @@ export function Workspace({ session }: Props) {
                       <button
                         type="button"
                         onClick={() => jumpToMissingField(label)}
-                        className="underline decoration-danger/50 underline-offset-2 hover:decoration-danger"
+                        className="cursor-pointer underline decoration-danger/50 underline-offset-2 hover:decoration-danger"
                       >
                         {label}
                       </button>

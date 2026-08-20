@@ -33,7 +33,8 @@ export const FieldRow = memo(function FieldRow({ field, onChange, onConfirm, onP
 
   return (
     <article
-      className={`field-row border-l-2 py-3 pl-3 pr-1 ${
+      id={`field-block-${field.id}`}
+      className={`field-row scroll-mt-44 border-l-2 py-3 pl-3 pr-1 ${
         kind === 'danger'
           ? 'border-danger bg-danger-bg/60'
           : kind === 'warn'
