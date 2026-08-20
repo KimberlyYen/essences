@@ -2,8 +2,8 @@
  * 單筆已儲存紀錄的詳細欄位。可編輯後寫回 Supabase。
  */
 import { useEffect, useState } from 'react'
-import { GROUPS, type ReviewField } from '../types'
-import { groupFields, type FieldSnapshot } from '../lib/fields'
+import { GROUPS, type FilterId, type ReviewField } from '../types'
+import { groupFields, needsReview, type FieldSnapshot } from '../lib/fields'
 import {
   canSaveSnapshots,
   detailFieldsFromSaved,
@@ -52,15 +52,25 @@ export function RecordDetail({ row, onBack, onSaved }: Props) {
   const [draft, setDraft] = useState(original)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [filter, setFilter] = useState<FilterId>('all')
 
   useEffect(() => {
     setDraft(detailFieldsFromSaved(row))
     setEditing(false)
     setError(null)
+    setFilter('all')
   }, [row])
 
   const snapshots = editing ? draft : original
-  const grouped = groupFields(asReviewFields(snapshots))
+  const reviewFields = asReviewFields(snapshots)
+  const reviewCount = reviewFields.filter(needsReview).length
+  const requiredCount = reviewFields.filter((field) => field.required).length
+  const visible = reviewFields.filter((field) => {
+    if (filter === 'review') return needsReview(field)
+    if (filter === 'required') return field.required
+    return true
+  })
+  const grouped = groupFields(visible)
   const fromSnapshot = row.fields.length > 0
   const dirty = snapshotsHaveChanges(original, draft)
   const ready = canSaveSnapshots(draft)
@@ -140,6 +150,11 @@ export function RecordDetail({ row, onBack, onSaved }: Props) {
             </button>
           )}
         </div>
+        <nav aria-label="篩選" className="mx-auto flex max-w-5xl gap-2 overflow-x-auto px-4 pb-3">
+          <FilterButton current={filter} id="all" onClick={setFilter} label={`全部 ${reviewFields.length}`} />
+          <FilterButton current={filter} id="review" onClick={setFilter} label={`需檢查 ${reviewCount}`} />
+          <FilterButton current={filter} id="required" onClick={setFilter} label={`必填 ${requiredCount}`} />
+        </nav>
         {error ? (
           <div className="border-t border-danger/20 bg-danger-bg" role="alert">
             <p className="mx-auto max-w-5xl px-4 py-2 text-sm text-danger">{error}</p>
@@ -159,7 +174,11 @@ export function RecordDetail({ row, onBack, onSaved }: Props) {
           <p className="mb-8 text-sm text-muted">
             這筆只存了法規必填。儲存後會留下完整欄位快照。
           </p>
-        ) : null}
+        ) : (
+          <p className="mb-8 text-sm text-ink-soft">
+            橘色是需檢查：送出時還沒確認的欄位。點上方「需檢查」只看這些。
+          </p>
+        )}
 
         {GROUPS.map((group) => {
           const fields = grouped.get(group) ?? []
@@ -175,7 +194,16 @@ export function RecordDetail({ row, onBack, onSaved }: Props) {
                   const missing = field.required && field.value.trim() === ''
                   const inputId = `saved-field-${field.id}`
                   return (
-                    <div key={field.id} className="flex items-baseline justify-between gap-x-4 py-3">
+                    <div
+                      key={field.id}
+                      className={`flex items-baseline justify-between gap-x-4 border-l-2 py-3 pl-3 ${
+                        field.required && field.value.trim() === ''
+                          ? 'border-danger bg-danger-bg/60'
+                          : needsReview(field)
+                            ? 'border-warn bg-warn-bg/50'
+                            : 'border-transparent'
+                      }`}
+                    >
                       <dt className="shrink-0 text-sm font-medium text-ink">
                         {editing ? (
                           <label htmlFor={inputId}>
@@ -216,7 +244,13 @@ export function RecordDetail({ row, onBack, onSaved }: Props) {
                           <span className="text-ink">{field.value.trim() === '' ? '—' : field.value}</span>
                         )}
                         {fromSnapshot ? (
-                          <span className="shrink-0 text-xs text-muted">{statusLabel(field.status)}</span>
+                          <span
+                            className={`shrink-0 text-xs ${
+                              missing ? 'text-danger' : field.status === 'pending' ? 'text-warn' : 'text-muted'
+                            }`}
+                          >
+                            {missing ? '未填寫' : statusLabel(field.status)}
+                          </span>
                         ) : null}
                       </dd>
                     </div>
@@ -226,7 +260,38 @@ export function RecordDetail({ row, onBack, onSaved }: Props) {
             </section>
           )
         })}
+
+        {visible.length === 0 ? (
+          <p className="text-sm text-muted">
+            {filter === 'review' ? '沒有需要特別檢查的欄位。' : '沒有符合條件的欄位。'}
+          </p>
+        ) : null}
       </main>
     </div>
+  )
+}
+
+function FilterButton({
+  current,
+  id,
+  label,
+  onClick,
+}: {
+  current: FilterId
+  id: FilterId
+  label: string
+  onClick: (id: FilterId) => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onClick(id)}
+      aria-pressed={current === id}
+      className={`min-h-11 shrink-0 rounded-sm px-3 py-2 text-sm ${
+        current === id ? 'bg-ink text-paper' : 'text-ink-soft hover:bg-paper-2'
+      }`}
+    >
+      {label}
+    </button>
   )
 }
