@@ -5,13 +5,16 @@
  */
 import { createBrowserClient } from '@supabase/ssr'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
+const supabaseUrl =
+  import.meta.env.VITE_SUPABASE_URL || import.meta.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseKey =
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+  import.meta.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 
 export function createClient() {
   if (!supabaseUrl || !supabaseKey) {
     throw new Error(
-      '缺少 VITE_SUPABASE_URL 或 VITE_SUPABASE_PUBLISHABLE_KEY。本機放 web/.env.local；Vercel 要在 Project Settings → Environment Variables 加這兩個（必須是 VITE_ 開頭）。',
+      '缺少 Supabase URL 或 key。本機放 web/.env.local；Vercel 請在 Project Settings → Environment Variables 加上 VITE_SUPABASE_URL 與 VITE_SUPABASE_PUBLISHABLE_KEY（或 Dashboard 預設的 NEXT_PUBLIC_ 同名變數），存檔後要 Redeploy。',
     )
   }
 

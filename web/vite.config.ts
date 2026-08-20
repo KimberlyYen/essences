@@ -9,6 +9,8 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  // Dashboard / Supabase 整合預設是 NEXT_PUBLIC_；不開這個 Vite 不會打進 bundle
+  envPrefix: ['VITE_', 'NEXT_PUBLIC_'],
   server: {
     host: true,
     port: 5173,
