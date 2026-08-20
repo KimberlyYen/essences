@@ -12,6 +12,7 @@ export const LOW_CONFIDENCE_THRESHOLD = 0.75
 
 /** 題目點名的三個法規必填。沒抽到也必須讓使用者補，不能空著送出。 */
 export const REQUIRED_LABELS = ['品名', '有效日期', '廠商名稱'] as const
+export type RequiredLabel = (typeof REQUIRED_LABELS)[number]
 
 export function isGroup(value: string): value is Group {
   // 後端 group 若出乎預期，groupFields 會退回「基本資料」
@@ -57,12 +58,12 @@ export function needsReview(field: ReviewField): boolean {
 }
 
 /** 三個必填標籤還沒出現在結果裡（解析中途取消時常發生）。 */
-export function absentRequiredLabels(fields: ReviewField[]): string[] {
+export function absentRequiredLabels(fields: ReviewField[]): RequiredLabel[] {
   const labels = new Set(fields.map((field) => field.label))
   return REQUIRED_LABELS.filter((label) => !labels.has(label))
 }
 
-function emptyRequiredField(label: (typeof REQUIRED_LABELS)[number]): ReviewField {
+function emptyRequiredField(label: RequiredLabel): ReviewField {
   return toReviewField({
     id: `missing-${label}`,
     label,
