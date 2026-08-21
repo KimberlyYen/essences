@@ -1,29 +1,14 @@
-import { describe, expect, it } from 'vitest'
-import { candidatesForField } from './candidates'
+/** 本體在 contractTests.ts，網頁「執行測試」跑同一批。 */
+import { describe, it } from 'vitest'
+import { testsForFile } from './contractTests'
 
-describe('詳情頁候選值', () => {
-  it('快照已有候選就用快照，並把目前值放進去', () => {
-    expect(
-      candidatesForField({
-        label: '有效日期',
-        value: '2026/11/30',
-        candidates: ['2026/03/15', '2026/05/30'],
-      }),
-    ).toEqual(['2026/11/30', '2026/03/15', '2026/05/30'])
-  })
+const tests = testsForFile('candidates')
+const groups = [...new Set(tests.map((test) => test.group))]
 
-  it('舊紀錄沒存候選時，用 mock 同一標籤的可能值補上', () => {
-    const options = candidatesForField({
-      label: '產品編號',
-      value: 'TH-2041',
-    })
-    expect(options).toContain('TH-2041')
-    expect(options).toContain('TH-3387')
-    expect(options.length).toBeGreaterThanOrEqual(2)
+for (const group of groups) {
+  describe(group, () => {
+    for (const test of tests.filter((item) => item.group === group)) {
+      it(test.name, test.run)
+    }
   })
-
-  it('有效日期（2）也對到有效日期的可能值', () => {
-    const options = candidatesForField({ label: '有效日期（2）', value: '2027/01/08' })
-    expect(options).toContain('2026/11/30')
-  })
-})
+}
