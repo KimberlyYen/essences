@@ -203,6 +203,24 @@ describe('修改與確認', () => {
     const filled = updateFieldValue(start, 'b', '2027/01/08')
     expect(canSubmit(filled)).toBe(true)
     expect(filled[1].status).toBe('edited')
+    expect(needsReview(filled[1])).toBe(true)
+  })
+
+  it('缺漏必填打第一個字仍留在需檢查，輸入框才不會被篩掉卸載', () => {
+    const empty = toReviewField(
+      apiField({
+        id: 'c',
+        label: '廠商名稱',
+        group: '廠商資訊',
+        value: '',
+        confidence: null,
+        required: true,
+      }),
+    )
+    expect(needsReview(empty)).toBe(true)
+    const typed = updateFieldValue([empty], 'c', '好')[0]
+    expect(typed.value).toBe('好')
+    expect(needsReview(typed)).toBe(true)
   })
 
   it('把已填的必填清掉會再次擋送出', () => {

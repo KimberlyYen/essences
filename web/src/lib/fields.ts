@@ -52,9 +52,9 @@ export function isMissingRequired(field: Pick<ReviewField, 'required' | 'value'>
   return field.required && field.value.trim() === ''
 }
 
-/** 「需檢查」= 必填還空，或狀態仍是 pending。 */
+/** 「需檢查」= 必填還空、仍是 pending，或剛改過還沒確認。 */
 export function needsReview(field: ReviewField): boolean {
-  return isMissingRequired(field) || field.status === 'pending'
+  return isMissingRequired(field) || field.status === 'pending' || field.status === 'edited'
 }
 
 /** 三個必填標籤還沒出現在結果裡（解析中途取消時常發生）。 */
