@@ -632,25 +632,27 @@ export const CONTRACT_TESTS: ContractTest[] = [
   },
 ]
 
+export function runOneContractTest(test: ContractTest): ContractTestResult {
+  try {
+    test.run()
+    return { file: test.file, group: test.group, name: test.name, ok: true }
+  } catch (caught) {
+    return {
+      file: test.file,
+      group: test.group,
+      name: test.name,
+      ok: false,
+      error: caught instanceof Error ? caught.message : String(caught),
+    }
+  }
+}
+
 export function runContractTests(): {
   passed: number
   failed: number
   results: ContractTestResult[]
 } {
-  const results = CONTRACT_TESTS.map((test) => {
-    try {
-      test.run()
-      return { file: test.file, group: test.group, name: test.name, ok: true }
-    } catch (caught) {
-      return {
-        file: test.file,
-        group: test.group,
-        name: test.name,
-        ok: false,
-        error: caught instanceof Error ? caught.message : String(caught),
-      }
-    }
-  })
+  const results = CONTRACT_TESTS.map(runOneContractTest)
   return {
     passed: results.filter((item) => item.ok).length,
     failed: results.filter((item) => !item.ok).length,
